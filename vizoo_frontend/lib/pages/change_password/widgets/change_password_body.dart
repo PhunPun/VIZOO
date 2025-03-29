@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/apps/colors/colors.dart';
 import 'package:vizoo_frontend/apps/router/router_name.dart';
 
-class LoginBody extends StatefulWidget {
-  const LoginBody({super.key});
+class ChangePasswordBody extends StatefulWidget {
+  const ChangePasswordBody({super.key});
 
   @override
-  State<LoginBody> createState() => _LoginBodyState();
+  State<ChangePasswordBody> createState() => _ChangePasswordBodyState();
 }
 
-class _LoginBodyState extends State<LoginBody> {
+class _ChangePasswordBodyState extends State<ChangePasswordBody> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: Column(
         children: [
-          const SizedBox(height: 130,),
+          const SizedBox(height: 150,),
           Text(
-            'Login',
+            textAlign: TextAlign.center,
+            'Your password must be at-least \n8 characters long',
             style: TextStyle(
-              color: Color(MyColor.pr5),
-              fontSize: 40,
-              fontWeight: FontWeight.bold
+              color: Color(MyColor.black),
+              fontSize: 20,
             ),
           ),
           Container(
@@ -33,33 +33,7 @@ class _LoginBodyState extends State<LoginBody> {
             child: TextField(
               decoration: InputDecoration(
                 contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                hintText: 'Email',
-                hintStyle: TextStyle(
-                  color: Color(MyColor.pr5),
-                  fontSize: 16
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: Color(MyColor.pr5)
-                  )
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: Color(MyColor.black)
-                  )
-                )
-              ),
-            ),
-          ),
-          Container(
-            margin: EdgeInsets.only(left: 50, right: 50, top: 30),
-            constraints: BoxConstraints(maxHeight: 38),
-            child: TextField(
-              decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                hintText: 'Password',
+                hintText: 'Enter new password',
                 hintStyle: TextStyle(
                   color: Color(MyColor.pr5),
                   fontSize: 16
@@ -80,44 +54,61 @@ class _LoginBodyState extends State<LoginBody> {
             ),
           ), 
           Container(
-            margin: EdgeInsets.only(right: 55, top: 15),
-            alignment: Alignment.centerRight,
-            child: InkWell(
-              onTap: () {
-                context.goNamed(RouterName.forgotPassword);
-              },
-              child: Text(
-                'Forgot Password?',
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  color: Color(MyColor.black),
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic
+            margin: EdgeInsets.only(left: 50, right: 50, top: 25),
+            constraints: BoxConstraints(maxHeight: 38),
+            child: TextField(
+              decoration: InputDecoration(
+                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                hintText: 'Confirm new password',
+                hintStyle: TextStyle(
+                  color: Color(MyColor.pr5),
+                  fontSize: 16
                 ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: Color(MyColor.pr5)
+                  )
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: Color(MyColor.black)
+                  )
+                )
               ),
             ),
           ),
-          const SizedBox(height: 20,),
+          const SizedBox(height: 40,), 
           ElevatedButton(
             onPressed: () {
-              //TODO: dieu huong
+              context.goNamed(RouterName.login);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(MyColor.pr4),
-              minimumSize: Size(135, 37),
+              minimumSize: Size(222, 44),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(25)
               )
             ),
             child: Text(
-              'Vizoo',
+              'Change password',
               style: TextStyle(
-                color: Color(MyColor.white),
-                fontSize: 15,
+                color: Color(MyColor.black),
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 fontStyle: FontStyle.italic
               ),
             ),
+          ),
+          const SizedBox(height: 55,),
+          Text(
+            'Login with',
+            style: TextStyle(
+              color: Color(MyColor.black),
+              fontSize: 17,
+              fontWeight: FontWeight.w600
+            ) ,
           ),
           const SizedBox(height: 25,),
           Row(
@@ -130,30 +121,6 @@ class _LoginBodyState extends State<LoginBody> {
               SvgPicture.asset(
                 'assets/icons/Gmail.svg'
               )
-            ],
-          ),
-          const SizedBox(height: 20,),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                'or',
-                style: TextStyle(
-                  color: Color(MyColor.black),
-                  fontSize: 20,
-                  fontStyle: FontStyle.italic
-                ),
-              ),
-              const SizedBox(width: 5,),
-              InkWell(
-                onTap: () {
-                  context.goNamed(RouterName.register);
-                },
-                child: SvgPicture.asset(
-                  'assets/icons/register.svg'
-                ),
-              ),
-              const SizedBox(width: 25,),
             ],
           ),
         ],
