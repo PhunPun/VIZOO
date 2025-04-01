@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/pages/login/widgets/login_body.dart';
 import 'package:vizoo_frontend/pages/login/widgets/login_header.dart';
@@ -16,6 +18,16 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: Icon(Platform.isIOS 
+            ? Icons.arrow_back_ios 
+            : Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: Stack(
         children: [
             BackgroundLogin(),
