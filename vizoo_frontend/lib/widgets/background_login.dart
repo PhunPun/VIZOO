@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 
 class BackgroundLogin extends StatelessWidget {
   const BackgroundLogin({super.key});
@@ -12,6 +13,13 @@ class BackgroundLogin extends StatelessWidget {
             width: double.infinity,
             height: double.infinity,
             color: Colors.white,
+          ),
+          Positioned(
+            right: 10,
+            top: 160,
+            child: SvgPicture.asset(
+              'assets/icons/logo.svg'
+            ),
           ),
           Positioned(
             top: 0,
