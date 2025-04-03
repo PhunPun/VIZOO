@@ -7,4 +7,5 @@ class MyColor{
   static const int pr4 = 0xFFAF8260;
   static const int pr5 = 0xFF803D3B;
   static const int grey = 0xFFD9D9D9;
+  static const int red = 0xFFF13535;
 }

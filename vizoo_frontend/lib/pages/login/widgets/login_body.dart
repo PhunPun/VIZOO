@@ -100,7 +100,7 @@ class _LoginBodyState extends State<LoginBody> {
           const SizedBox(height: 20,),
           ElevatedButton(
             onPressed: () {
-              //TODO: dieu huong
+              context.goNamed(RouterName.home);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(MyColor.pr4),

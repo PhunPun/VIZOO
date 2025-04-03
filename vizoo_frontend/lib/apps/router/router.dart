@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/apps/router/router_name.dart';
 import 'package:vizoo_frontend/pages/change_password/change_password_page.dart';
 import 'package:vizoo_frontend/pages/forgot_password/forgot_password_page.dart';
+import 'package:vizoo_frontend/pages/home/home_page.dart';
 import 'package:vizoo_frontend/pages/login/login_page.dart';
 import 'package:vizoo_frontend/pages/register/register_page.dart';
 import 'package:vizoo_frontend/pages/welcome/welcome_page.dart';
@@ -30,6 +31,13 @@ class RouterCustum{
               name: RouterName.register,
               builder: (BuildContext context, GoRouterState state) {
                 return const RegisterPage();
+              },
+            ),
+            GoRoute(
+              path: 'home',
+              name: RouterName.home,
+              builder: (BuildContext context, GoRouterState state) {
+                return const HomePage();
               },
             ),
             GoRoute(

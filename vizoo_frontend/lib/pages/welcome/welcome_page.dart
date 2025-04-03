@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:vizoo_frontend/apps/colors/colors.dart';
 import 'package:vizoo_frontend/pages/welcome/widgets/welcome_background.dart';
 import 'package:vizoo_frontend/pages/welcome/widgets/welcome_body.dart';
 import 'package:vizoo_frontend/pages/welcome/widgets/welcome_header.dart';
