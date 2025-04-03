@@ -6,6 +6,7 @@ import 'package:vizoo_frontend/pages/change_password/change_password_page.dart';
 import 'package:vizoo_frontend/pages/forgot_password/forgot_password_page.dart';
 import 'package:vizoo_frontend/pages/home/home_page.dart';
 import 'package:vizoo_frontend/pages/login/login_page.dart';
+
 import 'package:vizoo_frontend/pages/register/register_page.dart';
 import 'package:vizoo_frontend/pages/welcome/welcome_page.dart';
 

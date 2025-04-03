@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:vizoo_frontend/pages/login/widgets/login_body.dart';
 import 'package:vizoo_frontend/pages/login/widgets/login_header.dart';
 import 'package:vizoo_frontend/widgets/background_login.dart';
@@ -15,34 +16,39 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(Platform.isIOS 
-            ? Icons.arrow_back_ios 
-            : Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark, // Icon đen
       ),
-      body: Stack(
-        children: [
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: Colors.transparent,
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
+          leading: IconButton(
+            icon: Icon(
+              Platform.isIOS ? Icons.arrow_back_ios : Icons.arrow_back,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: Stack(
+          children: [
             BackgroundLogin(),
             SafeArea(
               child: SizedBox.expand(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    LoginHeader(),
-                    LoginBody()
-                  ],
+                  children: [LoginHeader(), LoginBody()],
                 ),
               ),
-            )
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
