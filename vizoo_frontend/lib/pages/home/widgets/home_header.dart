@@ -10,6 +10,7 @@ class HomeHeader extends StatelessWidget {
       width: double.infinity,
       child: Column(
         children: [
+          const SizedBox(height: 14,),
           Container(
             padding: EdgeInsets.symmetric(horizontal: 15),
             child: Row(
