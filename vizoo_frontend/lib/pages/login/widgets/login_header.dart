@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:vizoo_frontend/apps/colors/colors.dart';
 
 class LoginHeader extends StatelessWidget {
