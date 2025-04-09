@@ -18,7 +18,7 @@ class RouterCustum{
       path: '/',
       name: RouterName.welcome,
       builder: (BuildContext context, GoRouterState state) {
-        return const TimelinePage();
+        return const HomePage();
       },
       routes: <RouteBase>[
         GoRoute(

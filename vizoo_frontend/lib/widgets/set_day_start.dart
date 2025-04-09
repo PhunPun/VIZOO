@@ -2,17 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
+import 'package:vizoo_frontend/widgets/weather_card.dart';
 
 class SetDayStart extends StatefulWidget {
-  const SetDayStart({super.key});
+  final DateTime dateStart;
+  final int numberDay;
+  final ValueChanged<DateTime> onChangeDate;
+  const SetDayStart({
+    super.key,
+    required this.dateStart,
+    required this.numberDay,
+    required this.onChangeDate
+  });
 
   @override
   State<SetDayStart> createState() => _SetDayStartState();
 }
 
 class _SetDayStartState extends State<SetDayStart> {
-  DateTime _selectedDate = DateTime.now();
-
+  late DateTime _selectedDate;
+  @override
+  void initState(){
+    super.initState();
+    _selectedDate = widget.dateStart;
+  }
   // Hàm hiển thị date picker
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -44,6 +57,7 @@ class _SetDayStartState extends State<SetDayStart> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
+        widget.onChangeDate(_selectedDate);
       });
     }
   }
@@ -51,7 +65,6 @@ class _SetDayStartState extends State<SetDayStart> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 50,
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       decoration: BoxDecoration(
@@ -60,6 +73,7 @@ class _SetDayStartState extends State<SetDayStart> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -102,6 +116,10 @@ class _SetDayStartState extends State<SetDayStart> {
             height: 2,
             margin: const EdgeInsets.only(left: 15, top: 4),
             color: const Color(MyColor.pr5),
+          ),
+          WeatherCard(
+            dateStart: _selectedDate, 
+            numberDay: widget.numberDay,
           )
         ],
       ),
