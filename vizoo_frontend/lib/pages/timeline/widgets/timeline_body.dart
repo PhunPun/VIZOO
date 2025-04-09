@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:vizoo_frontend/pages/timeline/widgets/set_day_start.dart';
-import 'package:vizoo_frontend/pages/timeline/widgets/set_people_num.dart';
+import 'package:vizoo_frontend/widgets/set_day_start.dart';
+import 'package:vizoo_frontend/widgets/set_people_num.dart';
+import 'package:vizoo_frontend/widgets/timeline_list.dart';
 import 'package:vizoo_frontend/widgets/trip_card.dart';
 
 class TimelineBody extends StatefulWidget {
@@ -37,6 +38,8 @@ class _TimelineBodyState extends State<TimelineBody> {
   late int peopleNum;
   late String residence;
   late int cost;
+  DateTime initDate = DateTime.now();
+  int numberDay = 1;
   @override
   void initState(){
     super.initState();
@@ -45,7 +48,33 @@ class _TimelineBodyState extends State<TimelineBody> {
     peopleNum = widget.peopleNum;
     residence = widget.residence;
     cost = widget.cost;
+    caculatorDay();
   }
+  void caculatorDay() {
+  int newNumberDay = 1; // Default value
+  
+  if (widget.dayNum.contains('1 ngày')) {
+    newNumberDay = 1;
+  } 
+  else if (widget.dayNum.contains('2 ngày 1 đêm')) {
+    newNumberDay = 2;
+  }
+  else if (widget.dayNum.contains('3 ngày 2 đêm')) {
+    newNumberDay = 3;
+  }
+  else if (widget.dayNum.contains('4 ngày 3 đêm')) {
+    newNumberDay = 4;
+  }
+  else if (widget.dayNum.contains('5 ngày 4 đêm')) {
+    newNumberDay = 5;
+  }
+
+  if (numberDay != newNumberDay) {
+    setState(() {
+      numberDay = newNumberDay;
+    });
+  }
+}
   void onSetPeople(int newCount) {
     setState(() {
       peopleNum = newCount;
@@ -57,6 +86,12 @@ class _TimelineBodyState extends State<TimelineBody> {
       cost = newCost;
     });
   }
+  void onChangeDate(DateTime newDate){
+    setState(() {
+      initDate = newDate;
+    });
+  }
+  
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -80,7 +115,15 @@ class _TimelineBodyState extends State<TimelineBody> {
             onSetPeople: onSetPeople, 
             onSetCost: onSetCost
           ),
-          SetDayStart(),
+          SetDayStart(
+            dateStart: initDate,
+            numberDay: numberDay, 
+            onChangeDate: onChangeDate
+          ),
+          ...List.generate(
+            numberDay, 
+            (index) => TimelineList(numberDay: index +1)
+          )
         ],
       ),
     );

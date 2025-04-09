@@ -6,6 +6,6 @@ class MyColor{
   static const int pr3 = 0xFFE4C59E;
   static const int pr4 = 0xFFAF8260;
   static const int pr5 = 0xFF803D3B;
-  static const int grey = 0xFFD9D9D9;
+  static const int grey = 0xFFA19E9A;
   static const int red = 0xFFF13535;
 }
