@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
-import 'personal_info_screen.dart';
-
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:vizoo_frontend/apps/colors/colors.dart';
+import 'package:vizoo_frontend/pages/profile/widgets/personal_info_screen.dart';
+import 'package:vizoo_frontend/pages/profile/widgets/completed_trip.dart'; 
+import 'package:vizoo_frontend/pages/profile/widgets/reviews_screen.dart'; 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,18 +13,17 @@ class ProfileScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
+        backgroundColor: Color(MyColor.white),
         elevation: 0,
         title: Row(
           children: [
-          SvgPicture.asset(
-            'assets/icons/logo.svg',
-            width: 98.79,
-            height: 28.26,
-          )
-        ],
+            SvgPicture.asset(
+              'assets/icons/logo.svg',
+              width: 98.79,
+              height: 28.26,
+            )
+          ],
         ),
-        
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),
@@ -41,50 +42,59 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _buildProfileOption(
               context: context,
-              icon: Image.asset(
-                'assets/images/information.png'
-              ),
+              icon: Image.asset('assets/images/information.png'),
               title: 'Thông tin cá nhân',
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const PersonalInfoScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const PersonalInfoScreen(),
+                  ),
                 );
               },
             ),
             const SizedBox(height: 16),
             _buildProfileOption(
               context: context,
-              icon: Image.asset(
-                'assets/images/trip_complete.png'
-              ),
+              icon: Image.asset('assets/images/trip_complete.png'),
               title: 'Lịch trình đã hoàn thành',
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CompletedTripsScreen(),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 16),
             _buildProfileOption(
               context: context,
-              icon: Image.asset(
-                'assets/images/trip_false.png'
-              ),
+              icon: Image.asset('assets/images/trip_false.png'),
               title: 'Lịch trình đã hủy',
               onTap: () {},
             ),
             const SizedBox(height: 16),
             _buildProfileOption(
-              context: context,
-              icon: Image.asset(
-                'assets/images/complain.png'
-              ),
-              title: 'Đánh giá',
-              onTap: () {},
-            ),
+  context: context,
+  icon: Image.asset('assets/images/complain.png'),
+  title: 'Đánh giá',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ReviewsScreen(),
+      ),
+    );
+  },
+),
+
           ],
         ),
       ),
     );
   }
-  
+
   Widget _buildProfileOption({
     required BuildContext context,
     required Widget icon,
@@ -121,5 +131,4 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
-  
 }

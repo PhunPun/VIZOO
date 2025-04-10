@@ -6,7 +6,7 @@ import 'package:vizoo_frontend/pages/change_password/change_password_page.dart';
 import 'package:vizoo_frontend/pages/forgot_password/forgot_password_page.dart';
 import 'package:vizoo_frontend/pages/home/home_page.dart';
 import 'package:vizoo_frontend/pages/login/login_page.dart';
-
+import 'package:vizoo_frontend/pages/profile/profile.dart';
 import 'package:vizoo_frontend/pages/register/register_page.dart';
 import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 import 'package:vizoo_frontend/pages/welcome/welcome_page.dart';
@@ -47,6 +47,13 @@ class RouterCustum{
               name: RouterName.forgotPassword,
               builder: (BuildContext context, GoRouterState state) {
                 return const ForgotPasswordPage();
+              },
+              ),
+            GoRoute(
+              path: 'profile',
+              name: RouterName.profile,
+              builder: (BuildContext context, GoRouterState state) {
+                return const ProfileScreen();
               },
               routes: [
                 GoRoute(
