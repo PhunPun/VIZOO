@@ -8,6 +8,7 @@ import 'package:vizoo_frontend/pages/home/home_page.dart';
 import 'package:vizoo_frontend/pages/login/login_page.dart';
 import 'package:vizoo_frontend/pages/profile/profile.dart';
 import 'package:vizoo_frontend/pages/register/register_page.dart';
+import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 import 'package:vizoo_frontend/pages/welcome/welcome_page.dart';
 
 class RouterCustum{
@@ -17,7 +18,7 @@ class RouterCustum{
       path: '/',
       name: RouterName.welcome,
       builder: (BuildContext context, GoRouterState state) {
-        return const WelcomePage();
+        return const HomePage();
       },
       routes: <RouteBase>[
         GoRoute(

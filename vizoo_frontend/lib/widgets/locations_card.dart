@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vizoo_frontend/apps/colors/colors.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart';
 
 class LocationsCard extends StatelessWidget {
   final String name;
