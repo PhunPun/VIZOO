@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:vizoo_frontend/apps/colors/colors.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/pages/home/widgets/homeConten.dart';
 import 'package:vizoo_frontend/pages/love/love_page.dart';
 import 'package:vizoo_frontend/pages/profile/profile.dart';

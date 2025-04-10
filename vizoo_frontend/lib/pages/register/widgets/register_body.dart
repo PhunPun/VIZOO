@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:vizoo_frontend/apps/colors/colors.dart';
+
+import 'package:go_router/go_router.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart';
+import 'package:vizoo_frontend/apps/router/router_name.dart';
+
 
 class RegisterBody extends StatefulWidget {
   const RegisterBody({super.key});
