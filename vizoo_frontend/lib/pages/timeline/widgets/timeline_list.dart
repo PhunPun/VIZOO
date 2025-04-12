@@ -3,7 +3,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:vizoo_frontend/models/timeline_model.dart';
 import 'package:vizoo_frontend/pages/edit_timeline/edit_timeline_page.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
-import 'package:vizoo_frontend/widgets/timeline_card.dart';
+import 'package:vizoo_frontend/pages/timeline/widgets/timeline_card.dart';
 
 class TimelineList extends StatelessWidget {
   final int numberDay;
