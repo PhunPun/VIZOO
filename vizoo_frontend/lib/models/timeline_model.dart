@@ -6,12 +6,14 @@ class TimelineModel {
   final String address;
   final int price;
   final bool completed;
+  final String categories;
   TimelineModel({
     required this.time,
     required this.activities,
     required this.address,
     required this.price,
-    required this.completed
+    required this.completed,
+    required this.categories
   });
 
   static Map<int, List<TimelineModel>> getAllTimelinesByDay() {
@@ -22,6 +24,7 @@ class TimelineModel {
           activities: 'Ăn sáng',
           address: '123 Bình Thạnh',
           price: 30000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -29,6 +32,7 @@ class TimelineModel {
           activities: 'Tham quan Bạch Đằng',
           address: 'Bến Bạch Đằng, Quận 1',
           price: 0,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -36,6 +40,7 @@ class TimelineModel {
           activities: 'Ăn trưa',
           address: '45 Pasteur, Quận 1',
           price: 55000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -43,6 +48,7 @@ class TimelineModel {
           activities: 'Uống cà phê',
           address: 'Highlands Coffee, Lê Lợi',
           price: 45000,
+          categories: 'Uống',
           completed: false
         ),
         TimelineModel(
@@ -50,6 +56,7 @@ class TimelineModel {
           activities: 'Tham quan Landmark 81',
           address: 'Vinhomes Central Park',
           price: 100000,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -57,6 +64,7 @@ class TimelineModel {
           activities: 'Ăn tối',
           address: 'Sorae Sushi, Bitexco',
           price: 200000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -64,6 +72,7 @@ class TimelineModel {
           activities: 'Dạo phố đi bộ',
           address: 'Nguyễn Huệ, Quận 1',
           price: 0,
+          categories: 'Chơi',
           completed: false
         ),
       ],
@@ -73,6 +82,7 @@ class TimelineModel {
           activities: 'Đi chợ Bến Thành',
           address: 'Chợ Bến Thành, Quận 1',
           price: 150000,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -80,6 +90,7 @@ class TimelineModel {
           activities: 'Tham quan Dinh Độc Lập',
           address: '135 Nam Kỳ Khởi Nghĩa',
           price: 40000,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -87,6 +98,7 @@ class TimelineModel {
           activities: 'Ăn trưa tại nhà hàng',
           address: 'Nhà hàng Ngon 138, Quận 1',
           price: 90000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -94,6 +106,7 @@ class TimelineModel {
           activities: 'Tham quan Nhà thờ Đức Bà',
           address: '1 Công Xã Paris, Quận 1',
           price: 0,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -101,6 +114,7 @@ class TimelineModel {
           activities: 'Mua sắm tại Takashimaya',
           address: '92-94 Nam Kỳ Khởi Nghĩa',
           price: 500000,
+          categories: 'Chơi',
           completed: false
         ),
       ],
@@ -110,6 +124,7 @@ class TimelineModel {
           activities: 'Ăn sáng nhẹ',
           address: 'Tiệm bánh ABC, Quận 3',
           price: 25000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -117,6 +132,7 @@ class TimelineModel {
           activities: 'Tham quan Thảo Cầm Viên',
           address: '2 Nguyễn Bỉnh Khiêm, Quận 1',
           price: 50000,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -124,6 +140,7 @@ class TimelineModel {
           activities: 'Trả phòng khách sạn',
           address: 'Vinpearl Landmark 81',
           price: 0,
+          categories: 'Nơi ở',
           completed: false
         ),
         TimelineModel(
@@ -131,6 +148,7 @@ class TimelineModel {
           activities: 'Ăn trưa cuối chuyến',
           address: 'Cơm Niêu Sài Gòn',
           price: 120000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -138,6 +156,7 @@ class TimelineModel {
           activities: 'Ra sân bay',
           address: 'Tân Sơn Nhất',
           price: 100000,
+          categories: 'Chơi',
           completed: false
         ),
       ],
@@ -147,6 +166,7 @@ class TimelineModel {
           activities: 'Ăn sáng',
           address: '123 Bình Thạnh',
           price: 30000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -154,6 +174,7 @@ class TimelineModel {
           activities: 'Tham quan Bạch Đằng',
           address: 'Bến Bạch Đằng, Quận 1',
           price: 0,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -161,6 +182,7 @@ class TimelineModel {
           activities: 'Ăn trưa',
           address: '45 Pasteur, Quận 1',
           price: 55000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -168,6 +190,7 @@ class TimelineModel {
           activities: 'Uống cà phê',
           address: 'Highlands Coffee, Lê Lợi',
           price: 45000,
+          categories: 'Uống',
           completed: false
         ),
         TimelineModel(
@@ -175,6 +198,7 @@ class TimelineModel {
           activities: 'Tham quan Landmark 81',
           address: 'Vinhomes Central Park',
           price: 100000,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -182,6 +206,7 @@ class TimelineModel {
           activities: 'Ăn tối',
           address: 'Sorae Sushi, Bitexco',
           price: 200000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -189,6 +214,7 @@ class TimelineModel {
           activities: 'Dạo phố đi bộ',
           address: 'Nguyễn Huệ, Quận 1',
           price: 0,
+          categories: 'Chơi',
           completed: false
         ),
       ],
@@ -198,6 +224,7 @@ class TimelineModel {
           activities: 'Đi chợ Bến Thành',
           address: 'Chợ Bến Thành, Quận 1',
           price: 150000,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -205,6 +232,7 @@ class TimelineModel {
           activities: 'Tham quan Dinh Độc Lập',
           address: '135 Nam Kỳ Khởi Nghĩa',
           price: 40000,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -212,6 +240,7 @@ class TimelineModel {
           activities: 'Ăn trưa tại nhà hàng',
           address: 'Nhà hàng Ngon 138, Quận 1',
           price: 90000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -219,6 +248,7 @@ class TimelineModel {
           activities: 'Tham quan Nhà thờ Đức Bà',
           address: '1 Công Xã Paris, Quận 1',
           price: 0,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -226,6 +256,7 @@ class TimelineModel {
           activities: 'Mua sắm tại Takashimaya',
           address: '92-94 Nam Kỳ Khởi Nghĩa',
           price: 500000,
+          categories: 'Chơi',
           completed: false
         ),
       ],
@@ -235,6 +266,7 @@ class TimelineModel {
           activities: 'Ăn sáng nhẹ',
           address: 'Tiệm bánh ABC, Quận 3',
           price: 25000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -242,6 +274,7 @@ class TimelineModel {
           activities: 'Tham quan Thảo Cầm Viên',
           address: '2 Nguyễn Bỉnh Khiêm, Quận 1',
           price: 50000,
+          categories: 'Chơi',
           completed: false
         ),
         TimelineModel(
@@ -249,6 +282,7 @@ class TimelineModel {
           activities: 'Trả phòng khách sạn',
           address: 'Vinpearl Landmark 81',
           price: 0,
+          categories: 'Nơi ở',
           completed: false
         ),
         TimelineModel(
@@ -256,6 +290,7 @@ class TimelineModel {
           activities: 'Ăn trưa cuối chuyến',
           address: 'Cơm Niêu Sài Gòn',
           price: 120000,
+          categories: 'Ăn',
           completed: false
         ),
         TimelineModel(
@@ -263,6 +298,7 @@ class TimelineModel {
           activities: 'Ra sân bay',
           address: 'Tân Sơn Nhất',
           price: 100000,
+          categories: 'Chơi',
           completed: false
         ),
       ]

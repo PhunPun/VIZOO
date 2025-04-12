@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:vizoo_frontend/apps/colors/colors.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart';
 
 class EditReviewScreen extends StatefulWidget {
   final Map<String, dynamic> review;
