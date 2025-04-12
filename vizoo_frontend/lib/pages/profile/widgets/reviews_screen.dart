@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:vizoo_frontend/apps/colors/colors.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/edit_reviews_screen.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart';
 
 class ReviewsScreen extends StatelessWidget {
   const ReviewsScreen({super.key});

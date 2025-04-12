@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:vizoo_frontend/apps/colors/colors.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/personal_info_screen.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/completed_trip.dart'; 
-import 'package:vizoo_frontend/pages/profile/widgets/reviews_screen.dart'; 
+import 'package:vizoo_frontend/pages/profile/widgets/reviews_screen.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart'; 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 

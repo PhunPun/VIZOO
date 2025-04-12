@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/apps/router/router_name.dart';
 import 'package:vizoo_frontend/pages/change_password/change_password_page.dart';
+import 'package:vizoo_frontend/pages/edit_timeline/edit_timeline_page.dart';
 import 'package:vizoo_frontend/pages/forgot_password/forgot_password_page.dart';
 import 'package:vizoo_frontend/pages/home/home_page.dart';
 import 'package:vizoo_frontend/pages/login/login_page.dart';
@@ -18,7 +19,7 @@ class RouterCustum{
       path: '/',
       name: RouterName.welcome,
       builder: (BuildContext context, GoRouterState state) {
-        return const HomePage();
+        return const WelcomePage();
       },
       routes: <RouteBase>[
         GoRoute(

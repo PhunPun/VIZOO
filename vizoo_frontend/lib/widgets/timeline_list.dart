@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:vizoo_frontend/models/timeline_model.dart';
+import 'package:vizoo_frontend/pages/edit_timeline/edit_timeline_page.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/widgets/timeline_card.dart';
 
@@ -32,7 +33,24 @@ class TimelineList extends StatelessWidget {
                 activities: timeline.activities, 
                 address: timeline.address, 
                 price: timeline.price, 
-                completed: timeline.completed
+                completed: timeline.completed,
+                categories: timeline.categories,
+                onTap: () {
+                  // Điều hướng đến trang chi tiết
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditTimelinePage(
+                        time: timeline.time,
+                        activities: timeline.activities,
+                        address: timeline.address,
+                        price: timeline.price,
+                        completed: timeline.completed,
+                        categories: timeline.categories
+                      ),
+                    ),
+                  );
+                },
               );
             }).toList()
           ),
