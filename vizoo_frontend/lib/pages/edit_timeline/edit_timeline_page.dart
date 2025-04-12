@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
-import 'package:vizoo_frontend/widgets/act_list.dart';
-import 'package:vizoo_frontend/widgets/set_activities.dart';
+import 'package:vizoo_frontend/pages/edit_timeline/widgets/act_list.dart';
+import 'package:vizoo_frontend/pages/edit_timeline/widgets/set_activities.dart';
 import 'package:vizoo_frontend/widgets/set_time.dart';
 
 class EditTimelinePage extends StatefulWidget {

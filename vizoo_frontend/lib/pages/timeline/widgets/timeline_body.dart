@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/widgets/set_day_start.dart';
 import 'package:vizoo_frontend/widgets/set_people_num.dart';
-import 'package:vizoo_frontend/widgets/timeline_list.dart';
+import 'package:vizoo_frontend/pages/timeline/widgets/timeline_list.dart';
 import 'package:vizoo_frontend/widgets/trip_card.dart';
 
 class TimelineBody extends StatefulWidget {

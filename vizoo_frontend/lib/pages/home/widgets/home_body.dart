@@ -30,7 +30,8 @@ class _HomeBodyState extends State<HomeBody> {
               ),
             ),
           ),
-          TripList()
+          TripList(),
+          const SizedBox(height: 20,),
         ],
       ),
     );
