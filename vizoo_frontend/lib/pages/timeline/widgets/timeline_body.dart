@@ -98,17 +98,17 @@ class _TimelineBodyState extends State<TimelineBody> {
       width: double.infinity,
       child: Column(
         children: [
-          TripCard(
-            address: widget.address,
-            imageUrl: widget.imageUrl,
-            dayNum: widget.dayNum,
-            activitiesNum: activitiesNum,
-            mealNum: mealNum,
-            peopleNum: peopleNum,
-            residence: residence,
-            cost: cost,
-            rating: widget.rating,
-          ),
+          // TripCard(
+          //   address: widget.address,
+          //   imageUrl: widget.imageUrl,
+          //   dayNum: widget.dayNum,
+          //   activitiesNum: activitiesNum,
+          //   mealNum: mealNum,
+          //   peopleNum: peopleNum,
+          //   residence: residence,
+          //   cost: cost,
+          //   rating: widget.rating,
+          // ),
           SetPeopleNum(
             peopleNum: peopleNum, 
             cost: cost, 

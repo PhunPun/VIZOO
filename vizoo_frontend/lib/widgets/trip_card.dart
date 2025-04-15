@@ -1,32 +1,18 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:intl/intl.dart';
+import '../models/trip_models.dart';
 
 class TripCard extends StatefulWidget {
-  final String address; // dia diem
-  final String imageUrl; //
-  final String dayNum; // so ngay
-  final int activitiesNum; // so hoat dong
-  final int mealNum; // so bua an
-  final int peopleNum; // so nguoi
-  final String residence; // noi o
-  final int cost; // chi phi
-  final int rating; // danh gia
+  final Trips trip;
   final VoidCallback? onTap;
 
   const TripCard({
     super.key,
-    required this.address,
-    required this.imageUrl,
-    required this.dayNum,
-    required this.activitiesNum,
-    required this.mealNum,
-    required this.peopleNum,
-    required this.residence,
-    required this.cost,
-    required this.rating,
-    this.onTap
+    required this.trip,
+    this.onTap,
   });
 
   @override
@@ -36,6 +22,11 @@ class TripCard extends StatefulWidget {
 class _TripCardState extends State<TripCard> {
   bool _loved = false;
 
+  // Hàm định dạng ngày tháng
+  String getFormattedDate(DateTime date) {
+    return DateFormat("dd/MM/yyyy").format(date);
+  }
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -44,34 +35,35 @@ class _TripCardState extends State<TripCard> {
         width: double.infinity,
         child: Column(
           children: [
-            const SizedBox(height: 8,),
+            const SizedBox(height: 8),
             Row(
               children: [
-                const SizedBox(width: 8,),
+                const SizedBox(width: 8),
                 SvgPicture.asset(
-                  'assets/icons/logo_avt.svg'
+                 'assets/icons/logo_avt.svg'
                 ),
-                const SizedBox(width: 8,),
-                Text(
-                  widget.address,
-                  style: TextStyle(
-                    color: Color(MyColor.black),
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.trip.ten,
+                    style: TextStyle(
+                      color: Color(MyColor.black),
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold
+                    ),
                   ),
                 ),
-                const SizedBox(width: 5,),
                 Text(
-                  widget.dayNum,
+                  "${widget.trip.soNgay} ngày",
                   style: TextStyle(
                     color: Color(MyColor.black),
                     fontSize: 13,
-                    fontWeight: FontWeight.w400
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 3,),
+            const SizedBox(height: 3),
             Stack(
               children: [
                 Container(
@@ -79,9 +71,9 @@ class _TripCardState extends State<TripCard> {
                   height: 150,
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: NetworkImage(widget.imageUrl),
-                      fit: BoxFit.cover
-                    )
+                      image: NetworkImage(widget.trip.hinh_anh),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 Positioned(
@@ -92,19 +84,16 @@ class _TripCardState extends State<TripCard> {
                       setState(() {
                         _loved = !_loved;
                       });
-                    }, 
+                    },
                     icon: Icon(
-                      Icons.favorite, 
-                      color: Color( _loved 
-                        ? MyColor.red 
-                        : MyColor.white
-                      ),
+                      Icons.favorite,
+                      color: _loved ? Color(MyColor.red) : Color(MyColor.white),
                       shadows: [
                         Shadow(
                           color: Color(MyColor.black),
                           blurRadius: 4.0,
-                          offset: Offset(0, 0.5),
-                        )
+                          offset: const Offset(0, 0.5),
+                        ),
                       ],
                     ),
                     iconSize: 30,
@@ -115,7 +104,7 @@ class _TripCardState extends State<TripCard> {
             Container(
               width: double.infinity,
               color: Color(MyColor.pr1),
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               child: Row(
                 children: [
                   Column(
@@ -125,18 +114,18 @@ class _TripCardState extends State<TripCard> {
                       Row(
                         children: [
                           Text(
-                            'Hoạt đông: ',
+                            'Bắt đầu: ',
                             style: TextStyle(
                               color: Color(MyColor.black),
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            widget.activitiesNum.toString(),
+                            getFormattedDate(widget.trip.ngayBatDau),
                             style: TextStyle(
-                              color: Color(MyColor.pr5),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500
+                                color: Color(MyColor.pr5),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500
                             ),
                           ),
                         ],
@@ -144,18 +133,18 @@ class _TripCardState extends State<TripCard> {
                       Row(
                         children: [
                           Text(
-                            'Bữa ăn: ',
-                            style: TextStyle(
-                              color: Color(MyColor.black),
+                            "Số ngày: ",
+                            style: const TextStyle(
+                              color: Colors.black,
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            widget.mealNum.toString(),
+                            '${widget.trip.soNgay}',
                             style: TextStyle(
                               color: Color(MyColor.pr5),
                               fontSize: 16,
-                              fontWeight: FontWeight.w500
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -163,18 +152,18 @@ class _TripCardState extends State<TripCard> {
                       Row(
                         children: [
                           Text(
-                            'Số người: ',
-                            style: TextStyle(
-                              color: Color(MyColor.black),
+                            "Mô tả: ",
+                            style: const TextStyle(
+                              color: Colors.black,
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            widget.peopleNum.toString(),
+                            '${widget.trip.moTa}',
                             style: TextStyle(
                               color: Color(MyColor.pr5),
                               fontSize: 16,
-                              fontWeight: FontWeight.w500
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -189,25 +178,18 @@ class _TripCardState extends State<TripCard> {
                       Row(
                         children: [
                           Text(
-                            'Nơi ở: ',
+                            'Kết thúc: ',
                             style: TextStyle(
                               color: Color(MyColor.black),
                               fontSize: 16,
                             ),
                           ),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: 150, 
-                            ),
-                            child: Text(
-                              widget.residence,
-                              style: TextStyle(
+                          Text(
+                            getFormattedDate(widget.trip.ngayBatDau),
+                            style: TextStyle(
                                 color: Color(MyColor.pr5),
                                 fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis, // hien thi ... neu qua dai
-                              maxLines: 1,
+                                fontWeight: FontWeight.w500
                             ),
                           ),
                         ],
@@ -215,18 +197,18 @@ class _TripCardState extends State<TripCard> {
                       Row(
                         children: [
                           Text(
-                            'Chi phí: ',
-                            style: TextStyle(
-                              color: Color(MyColor.black),
+                            "Số người: ",
+                            style: const TextStyle(
+                              color: Colors.black,
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            "${NumberFormat("#,###", "vi_VN").format(widget.cost)}đ",
+                            '${widget.trip.soNguoi}',
                             style: TextStyle(
                               color: Color(MyColor.pr5),
                               fontSize: 16,
-                              fontWeight: FontWeight.w500
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -234,18 +216,18 @@ class _TripCardState extends State<TripCard> {
                       Row(
                         children: [
                           Text(
-                            'Đánh giá địa điểm: ',
-                            style: TextStyle(
-                              color: Color(MyColor.black),
+                            "Chi phí: ",
+                            style: const TextStyle(
+                              color: Colors.black,
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            widget.rating.toString(),
+                            '${widget.trip.chi_phi}'  +" VND",
                             style: TextStyle(
                               color: Color(MyColor.pr5),
                               fontSize: 16,
-                              fontWeight: FontWeight.w500
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -254,10 +236,11 @@ class _TripCardState extends State<TripCard> {
                   )
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 }
+
