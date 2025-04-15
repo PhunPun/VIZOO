@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 
 class LocationsCard extends StatelessWidget {
-  final String name;
-  final String imageUrl;
+  final String ten;
+  final String hinhAnh1;
   const LocationsCard({
     super.key,
-    required this.name,
-    required this.imageUrl
+    required this.ten,
+    required this.hinhAnh1
     });
 
   @override
@@ -22,7 +22,7 @@ class LocationsCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               image: DecorationImage(
-                image: NetworkImage(imageUrl),
+                image: NetworkImage(hinhAnh1),
                 fit: BoxFit.cover
               )
             ),
@@ -31,7 +31,7 @@ class LocationsCard extends StatelessWidget {
             bottom: 3,
             left: 3,
             child: Text(
-              name,
+              ten,
               style: TextStyle(
                 color: Color(MyColor.white),
                 fontSize: 12,
