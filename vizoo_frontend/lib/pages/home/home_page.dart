@@ -170,13 +170,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       ),
       child: Scaffold(
         backgroundColor: Color(MyColor.white),
-        body: IndexedStack(
-          index: _selectedIndex,
-          children: [
-            for (int i = 0; i < _pages.length; i++)
-              _buildPageWithScroll(i, _pages[i]),
-          ],
-        ),
+        body: _buildPageWithScroll(_selectedIndex, _pages[_selectedIndex]),
         bottomNavigationBar: _isBottomBarVisible ? _buildBottomNavBar() : null,
       ),
     );

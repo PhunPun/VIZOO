@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/widgets/hearder.dart';
+import 'package:vizoo_frontend/widgets/loved_trip_list.dart';
 import 'package:vizoo_frontend/widgets/trip_list.dart';
 
 class LovePage extends StatelessWidget {
@@ -28,7 +29,7 @@ class LovePage extends StatelessWidget {
                 ),
               ),
             ),
-            TripList(),
+            LovedTripList(),
             const SizedBox(height: 20,),
           ],
         ),

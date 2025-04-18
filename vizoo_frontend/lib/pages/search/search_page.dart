@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:vizoo_frontend/models/trip_models.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
+import 'package:vizoo_frontend/widgets/trip_card.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -10,34 +13,37 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<String> _searchResults = [];
-  List<String> _suggestions = [
-    'Vũng Tàu',
-    'Phú Quốc',
-    'Thành phố Hồ Chí Minh',
-    'Đà Nẵng',
-    'Hà Nội',
-    'Nha Trang',
-    'Huế',
-    'Cần Thơ',
-  ];
-
-  void _performSearch(String query) {
-    List<String> allItems = [
-      'Vũng Tàu',
-      'Phú Quốc',
-      'Thành phố Hồ Chí Minh',
-      'Đà Nẵng',
-      'Hà Nội',
-    ];
+  List<Trips> _searchResults = [];
+  List<String> _suggestions = [];
+  Future<void> _fetchSuggestions() async {
+    final snapshot = await FirebaseFirestore.instance.collection('dia_diem').get();
+    final suggestions = snapshot.docs.map((doc) => doc['ten'] as String).toList();
 
     setState(() {
-      _searchResults = allItems
-          .where((item) => item.toLowerCase().contains(query.toLowerCase()))
-          .toList();
+      _suggestions = suggestions;
     });
   }
+  void _performSearch(String query) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collectionGroup('trips')
+        .get();
 
+    final results = snapshot.docs
+        .where((doc) =>
+            doc['name'] != null &&
+            (doc['name'] as String).toLowerCase().contains(query.toLowerCase()))
+        .map((doc) => Trips.fromFirestore(doc))
+        .toList();
+
+    setState(() {
+      _searchResults = results;
+    });
+  }
+  @override
+  void initState() {
+    super.initState();
+    _fetchSuggestions(); // lấy danh sách gợi ý khi mở trang
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,18 +58,18 @@ class _SearchPageState extends State<SearchPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
               controller: _searchController,
               autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Nhập từ khóa tìm kiếm...',
                 border: OutlineInputBorder(),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blue),
+                  borderSide: BorderSide(color: Color(MyColor.pr5)),
                 ),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search),
@@ -76,12 +82,12 @@ class _SearchPageState extends State<SearchPage> {
                 _performSearch(query);
               },
             ),
-            const SizedBox(height: 16),
-            _searchController.text.isEmpty
-                ? _buildSuggestions() 
-                : _buildSearchResults(), 
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          _searchController.text.isEmpty
+              ? _buildSuggestions() 
+              : _buildSearchResults(), 
+        ],
       ),
     );
   }
@@ -114,13 +120,7 @@ class _SearchPageState extends State<SearchPage> {
           : ListView.builder(
               itemCount: _searchResults.length,
               itemBuilder: (context, index) {
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 5),
-                  color: Color(MyColor.pr1),
-                  child: ListTile(
-                    title: Text(_searchResults[index]),
-                  ),
-                );
+                return TripCard(trip: _searchResults[index]);
               },
             ),
     );
