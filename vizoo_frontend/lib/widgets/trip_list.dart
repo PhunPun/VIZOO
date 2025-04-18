@@ -1,47 +1,62 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:vizoo_frontend/models/trip_model.dart';
-import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 import 'package:vizoo_frontend/widgets/trip_card.dart';
+import '../models/trip_models.dart';
 
 class TripList extends StatelessWidget {
-  // Danh sách trips được lấy từ TripModel
-  final List<TripModel> trips = TripModel.getTrips();
-  TripList({super.key});
+  const TripList({super.key});
+
+  Future<List<Trips>> _fetchTrips() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collectionGroup('trips') // Lấy tất cả các trips từ mọi địa điểm
+          .get();
+
+      return snapshot.docs.map((doc) {
+        // Kiểm tra các trường và xử lý null
+        final data = doc.data() as Map<String, dynamic>;
+
+        // Giả sử bạn có một trường timestamp nào đó, ví dụ: 'startDate'
+        Timestamp? startDate = data['startDate'];
+        // Nếu startDate là null, gán giá trị mặc định cho nó (hoặc xử lý theo cách khác)
+        startDate ??= Timestamp.fromDate(DateTime.now());
+
+        // Tạo đối tượng Trips từ dữ liệu Firestore
+        return Trips.fromFirestore(data, doc.id);
+      }).toList();
+    } catch (e) {
+      throw Exception('Lỗi khi tải dữ liệu: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: trips.map((trip) {
-        return TripCard(
-          address: trip.address, 
-          imageUrl: trip.imageUrl, 
-          dayNum: trip.dayNum, 
-          activitiesNum: trip.activitiesNum, 
-          mealNum: trip.mealNum, 
-          peopleNum: trip.peopleNum, 
-          residence: trip.residence, 
-          cost: trip.cost, 
-          rating: trip.rating,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TimelinePage(
-                  address: trip.address,
-                  imageUrl: trip.imageUrl,
-                  dayNum: trip.dayNum,
-                  activitiesNum: trip.activitiesNum,
-                  mealNum: trip.mealNum,
-                  peopleNum: trip.peopleNum,
-                  residence: trip.residence,
-                  cost: trip.cost,
-                  rating: trip.rating,
-                ),
-              ),
+    return FutureBuilder<List<Trips>>(
+      future: _fetchTrips(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Lỗi: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('Không có chuyến đi nào'));
+        }
+
+        final trips = snapshot.data!;
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: trips.length,
+          itemBuilder: (context, index) {
+            return TripCard(
+              trip: trips[index],
             );
           },
         );
-      }).toList(),
+      },
     );
   }
 }

@@ -3,6 +3,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/apps/router/router_name.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+
+import 'auth_service.dart';
 
 class LoginBody extends StatefulWidget {
   const LoginBody({super.key});
@@ -12,19 +16,21 @@ class LoginBody extends StatefulWidget {
 }
 
 class _LoginBodyState extends State<LoginBody> {
+  final AuthService _authService = AuthService();
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: Column(
         children: [
-          const SizedBox(height: 130,),
+          const SizedBox(height: 130),
           Text(
             'Login',
             style: TextStyle(
               color: Color(MyColor.pr5),
               fontSize: 40,
-              fontWeight: FontWeight.bold
+              fontWeight: FontWeight.bold,
             ),
           ),
           Container(
@@ -32,24 +38,20 @@ class _LoginBodyState extends State<LoginBody> {
             constraints: BoxConstraints(maxHeight: 38),
             child: TextField(
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 0,
+                ),
                 hintText: 'Email',
-                hintStyle: TextStyle(
-                  color: Color(MyColor.pr5),
-                  fontSize: 16
-                ),
+                hintStyle: TextStyle(color: Color(MyColor.pr5), fontSize: 16),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: Color(MyColor.pr5)
-                  )
+                  borderSide: BorderSide(color: Color(MyColor.pr5)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: Color(MyColor.black)
-                  )
-                )
+                  borderSide: BorderSide(color: Color(MyColor.black)),
+                ),
               ),
             ),
           ),
@@ -58,27 +60,23 @@ class _LoginBodyState extends State<LoginBody> {
             constraints: BoxConstraints(maxHeight: 38),
             child: TextField(
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                hintText: 'Password',
-                hintStyle: TextStyle(
-                  color: Color(MyColor.pr5),
-                  fontSize: 16
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 0,
                 ),
+                hintText: 'Password',
+                hintStyle: TextStyle(color: Color(MyColor.pr5), fontSize: 16),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: Color(MyColor.pr5)
-                  )
+                  borderSide: BorderSide(color: Color(MyColor.pr5)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: Color(MyColor.black)
-                  )
-                )
+                  borderSide: BorderSide(color: Color(MyColor.black)),
+                ),
               ),
             ),
-          ), 
+          ),
           Container(
             margin: EdgeInsets.only(right: 55, top: 15),
             alignment: Alignment.centerRight,
@@ -92,22 +90,22 @@ class _LoginBodyState extends State<LoginBody> {
                 style: TextStyle(
                   color: Color(MyColor.black),
                   fontSize: 12,
-                  fontStyle: FontStyle.italic
+                  fontStyle: FontStyle.italic,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 20,),
+          const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               context.goNamed(RouterName.home);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(MyColor.pr4),
               minimumSize: Size(135, 37),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25)
-              )
+                borderRadius: BorderRadius.circular(25),
+              ),
             ),
             child: Text(
               'Vizoo',
@@ -115,24 +113,27 @@ class _LoginBodyState extends State<LoginBody> {
                 color: Color(MyColor.white),
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
-                fontStyle: FontStyle.italic
+                fontStyle: FontStyle.italic,
               ),
             ),
           ),
-          const SizedBox(height: 25,),
+          const SizedBox(height: 25),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SvgPicture.asset(
-                'assets/icons/FB.svg'
-              ),
-              const SizedBox(width: 20,),
-              SvgPicture.asset(
-                'assets/icons/Gmail.svg'
-              )
+              SvgPicture.asset('assets/icons/FB.svg'),
+              const SizedBox(width: 20),
+              InkWell(onTap: () async {
+                User? user = await _authService.signInWithGoogle();
+                if (user != null) {
+                  context.goNamed(RouterName.home);
+                } else {
+                  print('Đăng nhập thất bại');
+                }
+              },child: SvgPicture.asset('assets/icons/Gmail.svg')),
             ],
           ),
-          const SizedBox(height: 20,),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -141,19 +142,17 @@ class _LoginBodyState extends State<LoginBody> {
                 style: TextStyle(
                   color: Color(MyColor.black),
                   fontSize: 20,
-                  fontStyle: FontStyle.italic
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-              const SizedBox(width: 5,),
+              const SizedBox(width: 5),
               InkWell(
                 onTap: () {
                   context.goNamed(RouterName.register);
                 },
-                child: SvgPicture.asset(
-                  'assets/icons/register.svg'
-                ),
+                child: SvgPicture.asset('assets/icons/register.svg'),
               ),
-              const SizedBox(width: 25,),
+              const SizedBox(width: 25),
             ],
           ),
         ],
