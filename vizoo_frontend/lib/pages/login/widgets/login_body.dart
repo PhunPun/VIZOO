@@ -123,14 +123,22 @@ class _LoginBodyState extends State<LoginBody> {
             children: [
               SvgPicture.asset('assets/icons/FB.svg'),
               const SizedBox(width: 20),
-              InkWell(onTap: () async {
-                User? user = await _authService.signInWithGoogle();
-                if (user != null) {
-                  context.goNamed(RouterName.home);
-                } else {
-                  print('Đăng nhập thất bại');
-                }
-              },child: SvgPicture.asset('assets/icons/Gmail.svg')),
+              InkWell(
+                onTap: () async {
+                  try {
+                    User? user = await _authService.signInWithGoogle();
+                    if (user != null) {
+                      print('Đăng nhập thanh cong');
+                      context.goNamed(RouterName.home);
+                    } else {
+                      print('Đăng nhập thất bại: User null');
+                    }
+                  } catch (e) {
+                    print('Lỗi khi đăng nhập Google: $e');
+                  }
+                },
+                child: SvgPicture.asset('assets/icons/Gmail.svg'),
+              ),
             ],
           ),
           const SizedBox(height: 20),

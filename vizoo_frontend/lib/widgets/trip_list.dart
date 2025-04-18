@@ -11,24 +11,17 @@ class TripList extends StatelessWidget {
       final snapshot = await FirebaseFirestore.instance
           .collectionGroup('trips') // Lấy tất cả các trips từ mọi địa điểm
           .get();
-
       return snapshot.docs.map((doc) {
         // Kiểm tra các trường và xử lý null
         final data = doc.data() as Map<String, dynamic>;
 
-        // Giả sử bạn có một trường timestamp nào đó, ví dụ: 'startDate'
-        Timestamp? startDate = data['startDate'];
-        // Nếu startDate là null, gán giá trị mặc định cho nó (hoặc xử lý theo cách khác)
-        startDate ??= Timestamp.fromDate(DateTime.now());
-
         // Tạo đối tượng Trips từ dữ liệu Firestore
-        return Trips.fromFirestore(data, doc.id);
+        return Trips.fromFirestore(doc);
       }).toList();
     } catch (e) {
       throw Exception('Lỗi khi tải dữ liệu: $e');
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Trips>>(

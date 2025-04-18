@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
+import 'package:vizoo_frontend/widgets/fillter_trip_list.dart';
 import 'package:vizoo_frontend/widgets/trip_card.dart';
 import 'package:vizoo_frontend/widgets/trip_list.dart';
 
 class HomeBody extends StatefulWidget {
-  const HomeBody({super.key});
+  final Map<String, dynamic> filters;
+  const HomeBody({super.key, this.filters = const {}});
+
 
   @override
   State<HomeBody> createState() => _HomeBodyState();
@@ -30,7 +33,7 @@ class _HomeBodyState extends State<HomeBody> {
               ),
             ),
           ),
-          TripList(),
+          FillterTripList(filters: widget.filters,),
           const SizedBox(height: 20,),
         ],
       ),
