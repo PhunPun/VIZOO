@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vizoo_frontend/apps/colors/colors.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart';
 
 class WelcomeBackground extends StatelessWidget {
   const WelcomeBackground({super.key});

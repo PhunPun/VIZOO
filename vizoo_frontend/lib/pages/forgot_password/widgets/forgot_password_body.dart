@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:vizoo_frontend/apps/colors/colors.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/pages/forgot_password/widgets/verification.dart';
 
 class ForgotPasswordBody extends StatefulWidget {
