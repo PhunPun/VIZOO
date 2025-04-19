@@ -26,17 +26,17 @@ class YourTripPage extends StatelessWidget {
               ),
             ),
           ),
-          TimelineBody(
-            address: 'Vũng Tàu',
-            imageUrl: 'https://i.pinimg.com/736x/44/5e/30/445e306f9477c2ee8a123aa0d11ae8b3.jpg',
-            dayNum: '3 ngày 2 đêm',
-            activitiesNum: 15,
-            mealNum: 9,
-            peopleNum: 1,
-            residence: 'Nhà nghỉ Phun',
-            cost: 2500000,
-            rating: 4,
-          )
+          // TimelineBody(
+          //   address: 'Vũng Tàu',
+          //   imageUrl: 'https://i.pinimg.com/736x/44/5e/30/445e306f9477c2ee8a123aa0d11ae8b3.jpg',
+          //   dayNum: '3 ngày 2 đêm',
+          //   activitiesNum: 15,
+          //   mealNum: 9,
+          //   peopleNum: 1,
+          //   residence: 'Nhà nghỉ Phun',
+          //   cost: 2500000,
+          //   rating: 4,
+          // )
         ],
       ),
     );

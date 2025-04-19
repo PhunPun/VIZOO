@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
@@ -6,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../models/trip_models.dart';
 
 class TripCard extends StatefulWidget {
-  final Trips trip;
+  final Trip trip;
   final VoidCallback? onTap;
 
   const TripCard({
@@ -45,7 +44,7 @@ class _TripCardState extends State<TripCard> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    widget.trip.ten,
+                    widget.trip.name,
                     style: TextStyle(
                       color: Color(MyColor.black),
                       fontSize: 13,
@@ -71,7 +70,7 @@ class _TripCardState extends State<TripCard> {
                   height: 150,
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: NetworkImage(widget.trip.hinh_anh),
+                      image: NetworkImage(widget.trip.anh),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -149,17 +148,18 @@ class _TripCardState extends State<TripCard> {
                           ),
                         ],
                       ),
+
                       Row(
                         children: [
                           Text(
-                            "Mô tả: ",
+                            "Nơi ở: ",
                             style: const TextStyle(
                               color: Colors.black,
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            '${widget.trip.moTa}',
+                            '${widget.trip.noiO}',
                             style: TextStyle(
                               color: Color(MyColor.pr5),
                               fontSize: 16,
@@ -178,14 +178,14 @@ class _TripCardState extends State<TripCard> {
                       Row(
                         children: [
                           Text(
-                            'Kết thúc: ',
+                            'Số hoạt động: ',
                             style: TextStyle(
                               color: Color(MyColor.black),
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            getFormattedDate(widget.trip.ngayBatDau),
+                            '${widget.trip.soAct}',
                             style: TextStyle(
                                 color: Color(MyColor.pr5),
                                 fontSize: 16,
@@ -223,7 +223,8 @@ class _TripCardState extends State<TripCard> {
                             ),
                           ),
                           Text(
-                            '${widget.trip.chi_phi}'  +" VND",
+                            "${NumberFormat("#,###", "vi_VN").format(widget.trip.chiPhi)} VNĐ",
+                            //'${widget.trip.chiPhi}'  +" VND",
                             style: TextStyle(
                               color: Color(MyColor.pr5),
                               fontSize: 16,
