@@ -1,13 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../models/trip_models.dart';
+import 'package:vizoo_frontend/models/trip_models_json.dart';
 import 'trip_card.dart';
 
 class LovedTripList extends StatelessWidget {
   const LovedTripList({super.key});
 
-  Future<List<Trips>> _fetchLovedTrips() async {
+  Future<List<Trip>> _fetchLovedTrips() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return [];
 
@@ -17,7 +17,9 @@ class LovedTripList extends StatelessWidget {
         .where('user_id', isEqualTo: currentUser.uid)
         .get();
 
-    final lovedTripIds = loveSnapshot.docs.map((doc) => doc['trip_id']).toSet();
+    final lovedTripIds = loveSnapshot.docs
+        .map((doc) => doc['trip_id'] as String)
+        .toSet();
 
     if (lovedTripIds.isEmpty) return [];
 
@@ -26,18 +28,31 @@ class LovedTripList extends StatelessWidget {
         .collectionGroup('trips')
         .get();
 
-    return allTripsSnapshot.docs
-        .where((doc) => lovedTripIds.contains(doc.id))
-        .map((doc) => Trips.fromFirestore(doc))
-        .toList();
+    List<Trip> lovedTrips = [];
 
+    for (var doc in allTripsSnapshot.docs) {
+      if (lovedTripIds.contains(doc.id)) {
+        final data = doc.data();
+        final tripId = doc.id;
 
+        // Lấy locationId từ đường dẫn: dia_diem/{locationId}/trips/{tripId}
+        final segments = doc.reference.path.split('/');
+        String locationId = 'unknown';
+        final tripIndex = segments.indexOf('trips');
+        if (tripIndex > 0) {
+          locationId = segments[tripIndex - 1];
+        }
+
+        lovedTrips.add(Trip.fromJson(data, id: tripId, locationId: locationId));
+      }
+    }
+
+    return lovedTrips;
   }
 
   @override
   Widget build(BuildContext context) {
-    
-    return FutureBuilder<List<Trips>>(
+    return FutureBuilder<List<Trip>>(
       future: _fetchLovedTrips(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -57,9 +72,7 @@ class LovedTripList extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: trips.length,
           itemBuilder: (context, index) {
-            return TripCard(
-              trip: trips[index],
-            );
+            return TripCard(trip: trips[index]);
           },
         );
       },

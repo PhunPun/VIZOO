@@ -1,39 +1,23 @@
 import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:vizoo_frontend/pages/timeline/widgets/timeline_body.dart';
-import 'package:vizoo_frontend/themes/colors/colors.dart';
 
+import '../../themes/colors/colors.dart';
 
-class TimelinePage extends StatefulWidget {
-  final String address; // dia diem
-  final String imageUrl; //
-  final String dayNum; // so ngay
-  final int activitiesNum; // so hoat dong
-  final int mealNum; // so bua an
-  final int peopleNum; // so nguoi
-  final String residence; // noi o
-  final int cost; // chi phi
-  final int rating; // danh gia
+class TimelinePage extends StatelessWidget {
+  final String tripId;
+  final String locationId;
+
   const TimelinePage({
     super.key,
-    required this.address,
-    required this.imageUrl,
-    required this.dayNum,
-    required this.activitiesNum,
-    required this.mealNum,
-    required this.peopleNum,
-    required this.residence,
-    required this.cost,
-    required this.rating,
+    required this.tripId,
+    required this.locationId,
   });
 
-  @override
-  State<TimelinePage> createState() => _TimelinePageState();
-}
-
-class _TimelinePageState extends State<TimelinePage> {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -70,15 +54,9 @@ class _TimelinePageState extends State<TimelinePage> {
             children: [
               const SizedBox(height: 70,),
               TimelineBody(
-                address: widget.address, 
-                imageUrl: widget.imageUrl, 
-                dayNum: widget.dayNum, 
-                activitiesNum: widget.activitiesNum, 
-                mealNum: widget.mealNum, 
-                peopleNum: widget.peopleNum, 
-                residence: widget.residence, 
-                cost: widget.cost, 
-                rating: widget.rating)
+                tripId: tripId,
+                locationId: locationId,
+              ),
             ],
           ),
         ),

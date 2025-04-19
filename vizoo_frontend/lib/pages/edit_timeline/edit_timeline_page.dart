@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
@@ -15,6 +14,8 @@ class EditTimelinePage extends StatefulWidget {
   final int price;
   final bool completed;
   final String categories;
+  final String diaDiemId;
+
   const EditTimelinePage({
     super.key,
     required this.time,
@@ -23,6 +24,7 @@ class EditTimelinePage extends StatefulWidget {
     required this.price,
     required this.completed,
     required this.categories,
+    required this.diaDiemId,
   });
 
   @override
@@ -32,23 +34,26 @@ class EditTimelinePage extends StatefulWidget {
 class _EditTimelinePageState extends State<EditTimelinePage> {
   late String actCategories;
   bool isCompleted = false;
+
   @override
   void initState() {
     super.initState();
+    // Khởi tạo từ categories truyền vào
     actCategories = widget.categories;
   }
-  void onChangeCategories(String newCategories){
+
+  void onChangeCategories(String newCategories) {
     setState(() {
       actCategories = newCategories;
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark, 
+        statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: Color(MyColor.white),
@@ -78,33 +83,33 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
           child: Column(
             children: [
               SetTime(),
+              // Truyền actCategories từ state
               SetActivities(
-                actCategories: widget.categories, 
-                onChangeCategories: onChangeCategories
+                actCategories: actCategories,
+                onChangeCategories: onChangeCategories,
               ),
+              // Truyền actCategories xuống ActList để filter
               ActList(
-                categories: widget.categories, 
+                diaDiemId: widget.diaDiemId,
+                categories: actCategories,
               ),
+
+              // Phần "Đánh dấu đã hoàn thành"
               Container(
-                margin: EdgeInsets.symmetric(horizontal: 20),
-                padding: EdgeInsets.symmetric(horizontal: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(
-                      width: 1,
-                      color: Color(MyColor.pr5)
-                    )
-                  )
+                    bottom: BorderSide(width: 1, color: Color(MyColor.pr5)),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Expanded(
+                    const Expanded(
                       flex: 8,
                       child: Text(
                         'Đánh dấu đã hoàn thành',
-                        style: TextStyle(
-                          fontSize: 18
-                        ),
+                        style: TextStyle(fontSize: 18),
                       ),
                     ),
                     Expanded(
@@ -114,10 +119,7 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                         height: 20,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.black,
-                            width: 2,
-                          ),
+                          border: Border.all(color: Colors.black, width: 2),
                           color: isCompleted ? Color(MyColor.pr2) : Colors.transparent,
                         ),
                         child: InkWell(
@@ -127,18 +129,18 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                             });
                           },
                           child: isCompleted
-                              ? const Icon(Icons.check, color: Color(MyColor.pr5), size: 16,)
+                              ? const Icon(Icons.check, color: Color(MyColor.pr5), size: 16)
                               : null,
                         ),
-                      )
+                      ),
                     )
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),
-      )
+      ),
     );
   }
 }

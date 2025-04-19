@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -5,10 +6,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vizoo_frontend/calculator/day_format.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:intl/intl.dart';
-import '../models/trip_models.dart';
+import '../models/trip_models_json.dart';
 
 class TripCard extends StatefulWidget {
-  final Trips trip;
+  final Trip trip;
   final VoidCallback? onTap;
 
   const TripCard({
@@ -202,6 +203,7 @@ class _TripCardState extends State<TripCard> {
                           ),
                         ],
                       ),
+
                       Row(
                         children: [
                           Text(
@@ -271,25 +273,6 @@ class _TripCardState extends State<TripCard> {
                               fontWeight: FontWeight.w500
                             ),
                           )
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Text(
-                            "Đánh giá địa điểm: ",
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            '${widget.trip.danhGia}',
-                            style: TextStyle(
-                              color: Color(MyColor.pr5),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
                         ],
                       ),
                     ],
