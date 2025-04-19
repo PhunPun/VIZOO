@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 
 class SetActivities extends StatefulWidget {
   final String actCategories;
   final ValueChanged<String> onChangeCategories;
+
   const SetActivities({
     super.key,
     required this.actCategories,
-    required this.onChangeCategories
+    required this.onChangeCategories,
   });
 
   @override
@@ -16,14 +17,25 @@ class SetActivities extends StatefulWidget {
 }
 
 class _SetActivitiesState extends State<SetActivities> {
-  final List<String> _activities = ['Ăn', 'Uống', 'Chơi', 'Nơi ở'];
-  late String _selectedActivity;
+  // map tiếng Việt <-> key trong Firestore
+  final Map<String, String> _activityMap = {
+    'Ăn': 'eat',
+    'Uống': 'drink',
+    'Chơi': 'play',
+    'Nơi ở': 'hotel',
+  };
+
+  late String _selectedActivityVi;
   bool _showActivities = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedActivity = widget.actCategories;
+    // Khởi tạo từ widget.actCategories
+    _selectedActivityVi = _activityMap.entries
+        .firstWhere((e) => e.value == widget.actCategories,
+        orElse: () => const MapEntry('Ăn', 'eat'))
+        .key;
   }
 
   @override
@@ -36,90 +48,68 @@ class _SetActivitiesState extends State<SetActivities> {
         border: Border.all(color: const Color(MyColor.pr3)),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              Expanded(
-                flex: 5,
-                child: Row(
-                  children: [
-                    SvgPicture.asset('assets/icons/activities.svg'),
-                    const SizedBox(width: 14),
-                    const Text(
-                      'Hoạt động',
-                      style: TextStyle(
-                        color: Color(MyColor.black),
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
+              SvgPicture.asset('assets/icons/activities.svg'),
+              const SizedBox(width: 14),
+              const Text(
+                'Hoạt động',
+                style: TextStyle(
+                  color: Color(MyColor.black),
+                  fontSize: 18,
                 ),
               ),
-              Expanded(
-                flex: 5,
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _showActivities = !_showActivities;
-                    });
-                  },
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      _selectedActivity, // Hiển thị hoạt động được chọn
-                      style: const TextStyle(
-                        color: Color(MyColor.pr4),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+              const Spacer(),
+              InkWell(
+                onTap: () => setState(() => _showActivities = !_showActivities),
+                child: Text(
+                  _selectedActivityVi,
+                  style: const TextStyle(
+                    color: Color(MyColor.pr4),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
             ],
           ),
-          Container(
-            height: 2,
-            margin: const EdgeInsets.only(left: 15, top: 4),
-            color: const Color(MyColor.pr5),
-          ),
-          // Hiển thị danh sách hoạt động trực tiếp
+          const SizedBox(height: 4),
+          Container(color: const Color(MyColor.pr5), height: 2),
           if (_showActivities)
-              ..._activities.map((activity) => InkWell(
-                    onTap: () {
-                      setState(() {
-                        _selectedActivity = activity;
-                         widget.onChangeCategories(_selectedActivity);
-                        _showActivities = false; 
-                      });
-                    },
-                    child: _activitiesName(_selectedActivity, activity),
-                  )),
+            ..._activityMap.keys.map((activityVi) => InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedActivityVi = activityVi;
+                  _showActivities = false;
+                });
+                // gọi callback về parent
+                widget.onChangeCategories(_activityMap[activityVi]!);
+              },
+              child: Container(
+                height: 31,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _selectedActivityVi == activityVi
+                      ? Color(MyColor.pr1)
+                      : Colors.transparent,
+                  border: const Border(top: BorderSide(width: 1)),
+                ),
+                child: Text(
+                  activityVi,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: const Color(MyColor.black),
+                    fontWeight: _selectedActivityVi == activityVi
+                        ? FontWeight.bold
+                        : FontWeight.w400,
+                  ),
+                ),
+              ),
+            )),
         ],
       ),
     );
   }
-}
-
-Widget _activitiesName(String selectedActivity, String activity) {
-  return Container(
-    height: 31,
-    alignment: AlignmentDirectional.center,
-    decoration: BoxDecoration(
-      color: selectedActivity == activity ? Color(MyColor.pr1) : Colors.transparent,
-      border: const Border(
-        top: BorderSide(width: 1),
-      ),
-    ),
-    child: Text(
-      activity,
-      style: TextStyle(
-        fontSize: 16,
-        color: const Color(MyColor.black),
-        fontWeight: selectedActivity == activity ? FontWeight.bold : FontWeight.w400,
-      ),
-    ),
-  );
 }

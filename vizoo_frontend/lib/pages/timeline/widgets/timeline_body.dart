@@ -1,31 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/widgets/set_day_start.dart';
 import 'package:vizoo_frontend/widgets/set_people_num.dart';
 import 'package:vizoo_frontend/pages/timeline/widgets/timeline_list.dart';
 import 'package:vizoo_frontend/widgets/trip_card.dart';
+import 'package:vizoo_frontend/models/trip_models.dart';
 
 class TimelineBody extends StatefulWidget {
-  final String address; // dia diem
-  final String imageUrl; //
-  final String dayNum; // so ngay
-  final int activitiesNum; // so hoat dong
-  final int mealNum; // so bua an
-  final int peopleNum; // so nguoi
-  final String residence; // noi o
-  final int cost; // chi phi
-  final int rating; // danh gia
+  final String tripId;
+  final String locationId;
 
   const TimelineBody({
     super.key,
-    required this.address,
-    required this.imageUrl,
-    required this.dayNum,
-    required this.activitiesNum,
-    required this.mealNum,
-    required this.peopleNum,
-    required this.residence,
-    required this.cost,
-    required this.rating,
+    required this.tripId,
+    required this.locationId,
   });
 
   @override
@@ -33,97 +21,135 @@ class TimelineBody extends StatefulWidget {
 }
 
 class _TimelineBodyState extends State<TimelineBody> {
-  late int activitiesNum;
-  late int mealNum;
-  late int peopleNum;
-  late String residence;
-  late int cost;
+  Trip? tripData;
   DateTime initDate = DateTime.now();
-  int numberDay = 1;
+  List<int> days = [];
+
   @override
-  void initState(){
+  void initState() {
     super.initState();
-    activitiesNum = widget.activitiesNum;
-    mealNum = widget.mealNum;
-    peopleNum = widget.peopleNum;
-    residence = widget.residence;
-    cost = widget.cost;
-    caculatorDay();
-  }
-  void caculatorDay() {
-  int newNumberDay = 1; // Default value
-  
-  if (widget.dayNum.contains('1 ngày')) {
-    newNumberDay = 1;
-  } 
-  else if (widget.dayNum.contains('2 ngày 1 đêm')) {
-    newNumberDay = 2;
-  }
-  else if (widget.dayNum.contains('3 ngày 2 đêm')) {
-    newNumberDay = 3;
-  }
-  else if (widget.dayNum.contains('4 ngày 3 đêm')) {
-    newNumberDay = 4;
-  }
-  else if (widget.dayNum.contains('5 ngày 4 đêm')) {
-    newNumberDay = 5;
+    fetchTripData().then((_) => fetchDayNumbers());
   }
 
-  if (numberDay != newNumberDay) {
-    setState(() {
-      numberDay = newNumberDay;
-    });
+  Future<void> fetchTripData() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('dia_diem')
+          .doc(widget.locationId)
+          .collection('trips')
+          .doc(widget.tripId)
+          .get();
+
+      if (snapshot.exists) {
+        final data = snapshot.data()!;
+        final trip = Trip.fromJson(
+          data,
+          id: widget.tripId,
+          locationId: widget.locationId,
+        );
+        setState(() {
+          tripData = trip;
+          initDate = trip.ngayBatDau;
+        });
+      }
+    } catch (e) {
+      print('Lỗi khi lấy dữ liệu chuyến đi: $e');
+    }
   }
-}
+
+  Future<void> fetchDayNumbers() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('dia_diem')
+          .doc(widget.locationId)
+          .collection('trips')
+          .doc(widget.tripId)
+          .collection('timelines')
+          .orderBy('day_number')
+          .get();
+
+      final fetchedDays = snap.docs
+          .map((d) => (d.data()['day_number'] as int))
+          .toList();
+
+      setState(() {
+        days = fetchedDays;
+      });
+      print('Các ngày có lịch trình: $days');
+    } catch (e) {
+      print('Lỗi khi lấy dữ liệu ngày: $e');
+    }
+  }
+
   void onSetPeople(int newCount) {
-    setState(() {
-      peopleNum = newCount;
-    });
+    if (tripData != null) {
+      setState(() {
+        tripData = tripData!.copyWith(soNguoi: newCount);
+      });
+    }
   }
 
   void onSetCost(int newCost) {
-    setState(() {
-      cost = newCost;
-    });
+    if (tripData != null) {
+      setState(() {
+        tripData = tripData!.copyWith(chiPhi: newCost);
+      });
+    }
   }
-  void onChangeDate(DateTime newDate){
+
+  void onChangeDate(DateTime newDate) {
     setState(() {
       initDate = newDate;
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
+    if (tripData == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return SingleChildScrollView(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // TripCard(
-          //   address: widget.address,
-          //   imageUrl: widget.imageUrl,
-          //   dayNum: widget.dayNum,
-          //   activitiesNum: activitiesNum,
-          //   mealNum: mealNum,
-          //   peopleNum: peopleNum,
-          //   residence: residence,
-          //   cost: cost,
-          //   rating: widget.rating,
-          // ),
+          TripCard(trip: tripData!),
           SetPeopleNum(
-            peopleNum: peopleNum, 
-            cost: cost, 
-            onSetPeople: onSetPeople, 
-            onSetCost: onSetCost
+            peopleNum: tripData!.soNguoi,
+            cost: tripData!.chiPhi,
+            onSetPeople: onSetPeople,
+            onSetCost: onSetCost,
           ),
           SetDayStart(
             dateStart: initDate,
-            numberDay: numberDay, 
-            onChangeDate: onChangeDate
+            numberDay: tripData!.soNgay,
+            onChangeDate: onChangeDate,
           ),
-          ...List.generate(
-            numberDay, 
-            (index) => TimelineList(numberDay: index +1)
-          )
+          const SizedBox(height: 16),
+
+          if (days.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Không có lịch trình cho ngày nào'),
+            )
+          else
+            ...days.map((day) {
+              // Tạo query để lấy đúng timeline docs của ngày này
+              final query = FirebaseFirestore.instance
+                  .collection('dia_diem')
+                  .doc(widget.locationId)
+                  .collection('trips')
+                  .doc(widget.tripId)
+                  .collection('timelines')
+                  .where('day_number', isEqualTo: day);
+                  //.orderBy('hour');
+
+              return TimelineList(
+                numberDay: day,
+                timelineQuery: query,
+                locationId: widget.locationId,
+              );
+            }).toList(),
         ],
       ),
     );

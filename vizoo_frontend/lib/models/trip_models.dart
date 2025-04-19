@@ -1,45 +1,102 @@
-import 'dart:ffi';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Trips {
-  final String id;
-  final String moTa;
+class Trip {
+  final String id;         // tripId
+  final String locationId; // locationId
+  final String name;
+  final String anh;
+  final int chiPhi;
+  final int danhGia;
+  final bool love;
   final DateTime ngayBatDau;
-  final DateTime ngayKetThuc;
+  final String noiO;
+  final int soAct;
+  final int soEat;
   final int soNgay;
   final int soNguoi;
-  final String ten;
-  final String hinh_anh;
-  final int chi_phi;
 
-  Trips({
+  Trip({
     required this.id,
-    required this.moTa,
+    required this.locationId,
+    required this.name,
+    required this.anh,
+    required this.chiPhi,
+    required this.danhGia,
+    required this.love,
     required this.ngayBatDau,
-    required this.ngayKetThuc,
+    required this.noiO,
+    required this.soAct,
+    required this.soEat,
     required this.soNgay,
     required this.soNguoi,
-    required this.ten,
-    required this.hinh_anh,
-    required this.chi_phi,
   });
 
-  factory Trips.fromFirestore(Map<String, dynamic> data, String id) {
-    return Trips(
+  factory Trip.fromJson(Map<String, dynamic> json, {
+    required String id,
+    required String locationId,
+  }) {
+    return Trip(
       id: id,
-      moTa: data['mo_ta'] ?? '',
-      ngayBatDau: data['ngay_bat_dau'] != null
-          ? (data['ngay_bat_dau'] as Timestamp).toDate()
-          : DateTime.now(),
-      ngayKetThuc: data['ngay_ket_thuc'] != null
-          ? (data['ngay_ket_thuc'] as Timestamp).toDate()
-          : DateTime.now(),
-      soNgay: data['so_ngay'] ?? 0,
-      soNguoi: data['so_nguoi'] ?? 0,
-      ten: data['ten'] ?? '',
-      hinh_anh: data['hinh_anh'] ?? '',
-      chi_phi: data['chi_phi'] ?? '',
+      locationId: locationId,
+      name: json['name'] as String,
+      anh: json['anh'] as String,
+      chiPhi: json['chi_phi'] as int,
+      danhGia: json['danh_gia'] as int,
+      love: json['love'] as bool,
+      ngayBatDau: (json['ngay_bat_dau'] as Timestamp).toDate(),
+      noiO: json['noi_o'] as String,
+      soAct: json['so_act'] as int,
+      soEat: json['so_eat'] as int,
+      soNgay: json['so_ngay'] as int,
+      soNguoi: json['so_nguoi'] as int,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'anh': anh,
+      'chi_phi': chiPhi,
+      'danh_gia': danhGia,
+      'love': love,
+      'ngay_bat_dau': Timestamp.fromDate(ngayBatDau),
+      'noi_o': noiO,
+      'so_act': soAct,
+      'so_eat': soEat,
+      'so_ngay': soNgay,
+      'so_nguoi': soNguoi,
+    };
+  }
+  Trip copyWith({
+    String? id,
+    String? locationId,
+    String? name,
+    String? anh,
+    int? chiPhi,
+    int? danhGia,
+    bool? love,
+    DateTime? ngayBatDau,
+    String? noiO,
+    int? soAct,
+    int? soEat,
+    int? soNgay,
+    int? soNguoi,
+  }) {
+    return Trip(
+      id: id ?? this.id,
+      locationId: locationId ?? this.locationId,
+      name: name ?? this.name,
+      anh: anh ?? this.anh,
+      chiPhi: chiPhi ?? this.chiPhi,
+      danhGia: danhGia ?? this.danhGia,
+      love: love ?? this.love,
+      ngayBatDau: ngayBatDau ?? this.ngayBatDau,
+      noiO: noiO ?? this.noiO,
+      soAct: soAct ?? this.soAct,
+      soEat: soEat ?? this.soEat,
+      soNgay: soNgay ?? this.soNgay,
+      soNguoi: soNguoi ?? this.soNguoi,
     );
   }
 }
+
