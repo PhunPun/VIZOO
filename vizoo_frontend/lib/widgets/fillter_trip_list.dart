@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/models/trip_models_json.dart';
+import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 import 'package:vizoo_frontend/widgets/trip_card.dart';
 
 class FillterTripList extends StatelessWidget {
   final Map<String, dynamic> filters;
   const FillterTripList({super.key, this.filters = const {}});
+  
+  get trip => null;
 
   Future<List<Trip>> _fetchTrips() async {
     try {
@@ -100,7 +103,22 @@ class FillterTripList extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: trips.length,
           itemBuilder: (context, index) {
-            return TripCard(trip: trips[index]);
+            final trip = trips[index]; // 🛠️ Lấy phần tử đúng
+            return TripCard(
+              trip: trip,
+              onTap: () {
+                print('ldjbjdhvbkdjn/ldkvn.kjdhsv .kdjv fd/');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TimelinePage(
+                      tripId: trip.id,
+                      locationId: trip.locationId,
+                    ),
+                  ),
+                );
+              },
+            );
           },
         );
       },
