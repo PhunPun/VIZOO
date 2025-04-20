@@ -10,12 +10,14 @@ class TripList extends StatelessWidget {
   Future<List<Trip>> _fetchTrips() async {
     try {
       final snapshot = await FirebaseFirestore.instance
-          .collectionGroup('trips')
+          .collectionGroup('trips') // Lấy tất cả các trips từ mọi địa điểm
           .get();
 
       return snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         final tripId = doc.id;
+
+        // Trích locationId từ đường dẫn: dia_diem/{locationId}/trips/{tripId}
         final locationId = doc.reference.parent.parent?.id ?? '';
 
         return Trip.fromJson(data, id: tripId, locationId: locationId);
@@ -25,22 +27,6 @@ class TripList extends StatelessWidget {
     }
   }
 
-  Future<List<Trips>> _fetchTrips() async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collectionGroup('trips') // Lấy tất cả các trips từ mọi địa điểm
-          .get();
-      return snapshot.docs.map((doc) {
-        // Kiểm tra các trường và xử lý null
-        final data = doc.data() as Map<String, dynamic>;
-
-        // Tạo đối tượng Trips từ dữ liệu Firestore
-        return Trips.fromFirestore(doc);
-      }).toList();
-    } catch (e) {
-      throw Exception('Lỗi khi tải dữ liệu: $e');
-    }
-  }
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Trip>>(
@@ -67,7 +53,7 @@ class TripList extends StatelessWidget {
             return TripCard(
               trip: trip,
               onTap: () {
-                print('ldjbjdhvbkdjn/ldkvn.kjdhsv .kdjv fd/');
+                print('👉 Tapped trip: ${trip.name}');
                 Navigator.push(
                   context,
                   MaterialPageRoute(
