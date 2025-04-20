@@ -15,7 +15,6 @@ class EditTimelinePage extends StatefulWidget {
   final bool completed;
   final String categories;
   final String diaDiemId;
-
   const EditTimelinePage({
     super.key,
     required this.time,
@@ -47,7 +46,6 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
       actCategories = newCategories;
     });
   }
-
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -144,3 +142,4 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
     );
   }
 }
+

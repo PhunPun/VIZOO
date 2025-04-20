@@ -25,6 +25,22 @@ class TripList extends StatelessWidget {
     }
   }
 
+  Future<List<Trips>> _fetchTrips() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collectionGroup('trips') // Lấy tất cả các trips từ mọi địa điểm
+          .get();
+      return snapshot.docs.map((doc) {
+        // Kiểm tra các trường và xử lý null
+        final data = doc.data() as Map<String, dynamic>;
+
+        // Tạo đối tượng Trips từ dữ liệu Firestore
+        return Trips.fromFirestore(doc);
+      }).toList();
+    } catch (e) {
+      throw Exception('Lỗi khi tải dữ liệu: $e');
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Trip>>(

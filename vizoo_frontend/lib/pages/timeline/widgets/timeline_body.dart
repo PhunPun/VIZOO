@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/widgets/set_day_start.dart';
@@ -98,6 +99,7 @@ class _TimelineBodyState extends State<TimelineBody> {
   }
 
   void onChangeDate(DateTime newDate) {
+
     setState(() {
       initDate = newDate;
     });
