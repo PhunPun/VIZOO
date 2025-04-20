@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:vizoo_frontend/models/trip_models.dart';
+import 'package:vizoo_frontend/models/trip_models_json.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/widgets/trip_card.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  const SearchPage({
+    super.key,
+  });
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -13,8 +15,9 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<Trips> _searchResults = [];
+  List<Trip> _searchResults = [];
   List<String> _suggestions = [];
+
   Future<void> _fetchSuggestions() async {
     final snapshot = await FirebaseFirestore.instance.collection('dia_diem').get();
     final suggestions = snapshot.docs.map((doc) => doc['ten'] as String).toList();
@@ -23,27 +26,49 @@ class _SearchPageState extends State<SearchPage> {
       _suggestions = suggestions;
     });
   }
-  void _performSearch(String query) async {
-    final snapshot = await FirebaseFirestore.instance
-        .collectionGroup('trips')
-        .get();
 
-    final results = snapshot.docs
-        .where((doc) =>
-            doc['name'] != null &&
-            (doc['name'] as String).toLowerCase().contains(query.toLowerCase()))
-        .map((doc) => Trips.fromFirestore(doc))
-        .toList();
+  Future<void> _performSearch(String query) async {
+    try {
+      final diaDiemRef = FirebaseFirestore.instance.collection('dia_diem');
+      final diaDiemSnapshot = await diaDiemRef.get();
 
-    setState(() {
-      _searchResults = results;
-    });
+      List<Trip> results = [];
+
+      for (var diaDiemDoc in diaDiemSnapshot.docs) {
+        final tripSnapshot = await diaDiemRef
+            .doc(diaDiemDoc.id)
+            .collection('trips')
+            .get();
+
+        for (var tripDoc in tripSnapshot.docs) {
+          final data = tripDoc.data();
+          final name = data['name'] ?? '';
+
+          if ((name as String).toLowerCase().contains(query.toLowerCase())) {
+            results.add(Trip.fromJson(
+              data,
+              id: tripDoc.id,
+              locationId: diaDiemDoc.id,
+            ));
+          }
+        }
+      }
+
+      setState(() {
+        _searchResults = results;
+      });
+    } catch (e) {
+      print('Lỗi tìm kiếm: $e');
+    }
   }
+
   @override
   void initState() {
     super.initState();
-    _fetchSuggestions(); // lấy danh sách gợi ý khi mở trang
+    _fetchSuggestions();
   }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,7 +78,7 @@ class _SearchPageState extends State<SearchPage> {
           IconButton(
             icon: const Icon(Icons.close),
             onPressed: () {
-              Navigator.pop(context); 
+              Navigator.pop(context);
             },
           ),
         ],
@@ -67,7 +92,7 @@ class _SearchPageState extends State<SearchPage> {
               autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Nhập từ khóa tìm kiếm...',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
                 focusedBorder: OutlineInputBorder(
                   borderSide: BorderSide(color: Color(MyColor.pr5)),
                 ),
@@ -85,8 +110,8 @@ class _SearchPageState extends State<SearchPage> {
           ),
           const SizedBox(height: 16),
           _searchController.text.isEmpty
-              ? _buildSuggestions() 
-              : _buildSearchResults(), 
+              ? _buildSuggestions()
+              : _buildSearchResults(),
         ],
       ),
     );
@@ -103,8 +128,8 @@ class _SearchPageState extends State<SearchPage> {
             child: ListTile(
               title: Text(_suggestions[index]),
               onTap: () {
-                _searchController.text = _suggestions[index]; 
-                _performSearch(_suggestions[index]);  
+                _searchController.text = _suggestions[index];
+                _performSearch(_suggestions[index]);
               },
             ),
           );

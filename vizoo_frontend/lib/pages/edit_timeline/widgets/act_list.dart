@@ -1,14 +1,18 @@
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
-import 'package:vizoo_frontend/models/act_model.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
+import '../../../models/activities.dart';
 
 class ActList extends StatefulWidget {
+  final String diaDiemId;
   final String categories;
-  
+
   const ActList({
     super.key,
+    required this.diaDiemId,
     required this.categories,
   });
 
@@ -17,60 +21,87 @@ class ActList extends StatefulWidget {
 }
 
 class _ActListState extends State<ActList> {
-  String? selectedactName;
+
+  String? selectedActName;
+  late Future<List<Activity>> _activityFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _activityFuture = fetchActivities();
+  }
+
+  @override
+  void didUpdateWidget(covariant ActList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.categories != oldWidget.categories) {
+      setState(() {
+        _activityFuture = fetchActivities();
+      });
+    }
+  }
+
+  Future<List<Activity>> fetchActivities() async {
+    final snap = await FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.diaDiemId)
+        .collection('activities')
+        .where('categories', isEqualTo: widget.categories)
+        .get();
+
+    return snap.docs
+        .map((doc) => Activity.fromFirestore(doc.data()!))
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<ActModel> filteredActs = ActModel.getActModel()
-        .where((act) => act.actCategories == widget.categories)
-        .toList();
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
-      padding: const EdgeInsets.only(top: 13, left: 8, right: 8, bottom: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(MyColor.pr5)),
-      ),
-      child: Column(
-        children: [
-          if (filteredActs.isEmpty)
-            const Text(
-              'Không có hoạt động nào cho danh mục này',
-              style: TextStyle(
-                color: Color(MyColor.grey),
-                fontSize: 16,
-              ),
-            )
-          else
-            ...filteredActs.map((act) => actCard(act)).toList(),
-        ]
-      ),
+    return FutureBuilder<List<Activity>>(
+      future: _activityFuture,
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final acts = snap.data ?? [];
+        if (acts.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Không có hoạt động cho danh mục này',
+              style: TextStyle(color: Color(MyColor.grey)),
+            ),
+          );
+        }
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
+          padding: const EdgeInsets.only(top: 13, left: 8, right: 8, bottom: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(MyColor.pr5)),
+          ),
+          child: Column(
+            children: acts.map((act) => _actCard(act)).toList(),
+          ),
+        );
+      },
     );
   }
 
-  Widget actCard(ActModel act){
-    final bool _isSelected = selectedactName == act.actName;
+  Widget _actCard(Activity act) {
+    final isSelected = selectedActName == act.name;
     return InkWell(
-      onTap: () {
-        setState(() {
-          selectedactName = act.actName;
-        });
-      },
+      onTap: () => setState(() => selectedActName = act.name),
       child: Container(
-        margin: EdgeInsets.only(top: 8),
-        padding: EdgeInsets.only(left: 8),
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           border: Border(
-            left: BorderSide(
-              width: 4,
-              color: Color(MyColor.pr3)
-            ),
-            bottom: BorderSide(
-                width: 0.2,
-                color: Color(MyColor.pr3)
-              )
-          )
+            left: BorderSide(width: 4, color: Color(MyColor.pr3)),
+            bottom: BorderSide(width: 0.2, color: Color(MyColor.pr3)),
+          ),
+
         ),
         child: Row(
           children: [
@@ -80,19 +111,23 @@ class _ActListState extends State<ActList> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    act.actName,
-                    style: TextStyle(
+
+                    act.name,
+                    style: const TextStyle(
                       color: Color(MyColor.black),
-                      fontSize: 16
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                   Text(
-                    act.actAddress,
-                    style: TextStyle(
+                    act.address,
+                    style: const TextStyle(
                       color: Color(MyColor.grey),
-                      fontSize: 14
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
                     ),
-                  )
+                  ),
+
                 ],
               ),
             ),
@@ -101,10 +136,12 @@ class _ActListState extends State<ActList> {
               child: Align(
                 alignment: Alignment.center,
                 child: Text(
-                  "${NumberFormat("#,###", "vi_VN").format(act.actPrice)}đ",
-                  style: TextStyle(
+
+                  "${NumberFormat('#,###', 'vi_VN').format(act.price)}đ",
+                  style: const TextStyle(
                     fontSize: 14,
-                    color: Color(MyColor.pr4)
+                    color: Color(MyColor.pr4),
+
                   ),
                 ),
               ),
@@ -113,15 +150,15 @@ class _ActListState extends State<ActList> {
               flex: 1,
               child: Align(
                 alignment: Alignment.centerRight,
-                child: _isSelected
-                  ? SvgPicture.asset(
-                      'assets/icons/done.svg',
-                      width: 13.33,
-                      height: 13.33,
-                    )
-                  : const SizedBox.shrink(),
+                child: isSelected
+                    ? SvgPicture.asset(
+                  'assets/icons/done.svg',
+                  width: 13.33,
+                  height: 13.33,
+                )
+                    : const SizedBox.shrink(),
               ),
-            )
+            ),
           ],
         ),
       ),

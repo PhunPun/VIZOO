@@ -1,48 +1,89 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:vizoo_frontend/models/trip_models.dart';
+import 'package:vizoo_frontend/models/trip_models_json.dart';
+import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 import 'package:vizoo_frontend/widgets/trip_card.dart';
 
 class FillterTripList extends StatelessWidget {
   final Map<String, dynamic> filters;
   const FillterTripList({super.key, this.filters = const {}});
+  
+  get trip => null;
 
-  Future<List<Trips>> _fetchTrips() async {
+  Future<List<Trip>> _fetchTrips() async {
     try {
-      Query query;
+      List<Trip> trips = [];
 
-      // Nếu có id_dia_diem -> lấy từ collection riêng
       if (filters['id_dia_diem'] != null) {
-        query = FirebaseFirestore.instance
+        // Lấy dữ liệu từ một địa điểm cụ thể
+        final tripSnapshot = await FirebaseFirestore.instance
             .collection('dia_diem')
             .doc(filters['id_dia_diem'])
-            .collection('trips');
+            .collection('trips')
+            .get();
+
+        for (var doc in tripSnapshot.docs) {
+          final data = doc.data();
+
+          // Áp dụng các điều kiện lọc
+          if (_matchFilters(data)) {
+            trips.add(Trip.fromJson(
+              data,
+              id: doc.id,
+              locationId: filters['id_dia_diem'],
+            ));
+          }
+        }
       } else {
-        // Nếu không có id_dia_diem -> lấy toàn bộ trips
-        query = FirebaseFirestore.instance.collectionGroup('trips');
+        // Lấy toàn bộ trips từ tất cả địa điểm
+        final diaDiemSnapshot =
+            await FirebaseFirestore.instance.collection('dia_diem').get();
+
+        for (var diaDiemDoc in diaDiemSnapshot.docs) {
+          final tripSnapshot = await FirebaseFirestore.instance
+              .collection('dia_diem')
+              .doc(diaDiemDoc.id)
+              .collection('trips')
+              .get();
+
+          for (var tripDoc in tripSnapshot.docs) {
+            final data = tripDoc.data();
+
+            if (_matchFilters(data)) {
+              trips.add(Trip.fromJson(
+                data,
+                id: tripDoc.id,
+                locationId: diaDiemDoc.id,
+              ));
+            }
+          }
+        }
       }
 
-      // Áp dụng các điều kiện lọc khác
-      if (filters['maxPrice'] != null) {
-        query = query.where('chi_phi', isLessThanOrEqualTo: filters['maxPrice']);
-      }
-      if (filters['people'] != null) {
-        query = query.where('so_nguoi', isEqualTo: filters['people']);
-      }
-      if (filters['days'] != null) {
-        query = query.where('so_ngay', isEqualTo: filters['days']);
-      }
+      return trips;
 
-      final snapshot = await query.get();
-      return snapshot.docs.map((doc) => Trips.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('Lỗi khi tải dữ liệu: $e');
     }
   }
 
+  bool _matchFilters(Map<String, dynamic> data) {
+    // Kiểm tra từng bộ lọc
+    if (filters['maxPrice'] != null &&
+        (data['chi_phi'] ?? 0) > filters['maxPrice']) return false;
+
+    if (filters['people'] != null &&
+        (data['so_nguoi'] ?? -1) != filters['people']) return false;
+
+    if (filters['days'] != null &&
+        (data['so_ngay'] ?? -1) != filters['days']) return false;
+
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Trips>>(
+    return FutureBuilder<List<Trip>>(
       future: _fetchTrips(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -63,7 +104,22 @@ class FillterTripList extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: trips.length,
           itemBuilder: (context, index) {
-            return TripCard(trip: trips[index]);
+            final trip = trips[index]; // 🛠️ Lấy phần tử đúng
+            return TripCard(
+              trip: trip,
+              onTap: () {
+                print('ldjbjdhvbkdjn/ldkvn.kjdhsv .kdjv fd/');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TimelinePage(
+                      tripId: trip.id,
+                      locationId: trip.locationId,
+                    ),
+                  ),
+                );
+              },
+            );
           },
         );
       },
