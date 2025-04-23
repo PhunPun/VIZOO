@@ -3,6 +3,29 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 
+/// ✅ Class đại diện cho lựa chọn lịch trình (ngày, đêm)
+class DayNightOption {
+  final int day;
+  final int night;
+
+  DayNightOption(this.day, this.night);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DayNightOption &&
+          runtimeType == other.runtimeType &&
+          day == other.day &&
+          night == other.night;
+
+  @override
+  int get hashCode => day.hashCode ^ night.hashCode;
+
+  @override
+  String toString() => '$day ngày $night đêm';
+}
+
+/// ✅ Widget FilterDrawer
 class FilterDrawer extends StatefulWidget {
   final void Function(Map<String, dynamic>) onApply;
   final Map<String, dynamic> initialFilters;
@@ -12,6 +35,7 @@ class FilterDrawer extends StatefulWidget {
     required this.onApply,
     this.initialFilters = const {},
   });
+
   @override
   State<FilterDrawer> createState() => _FilterDrawerState();
 }
@@ -20,19 +44,24 @@ class _FilterDrawerState extends State<FilterDrawer> {
   int selectedPrice = 3000000;
   int? selectedPeople;
   String? selectedLocation;
-  Map<String, int>? selectedDayNight;
+  DayNightOption? selectedDayNight;
+  String? selectedDiaDiemId;
+
   final List<int> peopleOptions = [1, 2, 3, 4, 5, 6];
-  final List<Map<String, int>> dayNightOptions = [
-    {"day": 1, "night": 0},
-    {"day": 2, "night": 1},
-    {"day": 3, "night": 2},
-    {"day": 4, "night": 3},
-    {"day": 5, "night": 4},
+  final List<DayNightOption> dayNightOptions = [
+    DayNightOption(1, 0),
+    DayNightOption(2, 1),
+    DayNightOption(3, 2),
+    DayNightOption(4, 3),
+    DayNightOption(5, 4),
   ];
 
   int minPrice = 500000;
   int maxPrice = 15000000;
-  String? selectedDiaDiemId;
+
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> diaDiemDocs = [];
+
+  @override
   void initState() {
     super.initState();
     fetchDiaDiems();
@@ -40,14 +69,16 @@ class _FilterDrawerState extends State<FilterDrawer> {
     selectedPrice = widget.initialFilters['maxPrice'] ?? 3000000;
     selectedPeople = widget.initialFilters['people'];
     selectedDiaDiemId = widget.initialFilters['id_dia_diem'];
-    
+
     final day = widget.initialFilters['days'];
     final night = widget.initialFilters['nights'];
     if (day != null && night != null) {
-      selectedDayNight = {"day": day, "night": night};
+      selectedDayNight = dayNightOptions.firstWhere(
+        (option) => option.day == day && option.night == night,
+        orElse: () => DayNightOption(day, night),
+      );
     }
   }
-  List<QueryDocumentSnapshot<Map<String, dynamic>>> diaDiemDocs = [];
 
   Future<void> fetchDiaDiems() async {
     final snapshot = await FirebaseFirestore.instance.collection('dia_diem').get();
@@ -72,7 +103,6 @@ class _FilterDrawerState extends State<FilterDrawer> {
             ),
             const SizedBox(height: 24),
 
-            // Giá tiền
             const Text("Giá tiền", style: TextStyle(fontSize: 16)),
             Text(
               "${NumberFormat("#,###", "vi_VN").format(selectedPrice)}đ",
@@ -95,7 +125,6 @@ class _FilterDrawerState extends State<FilterDrawer> {
 
             const SizedBox(height: 20),
 
-            // Số người
             const Text("Số người", style: TextStyle(fontSize: 16)),
             DropdownButton<int>(
               value: selectedPeople,
@@ -116,18 +145,15 @@ class _FilterDrawerState extends State<FilterDrawer> {
 
             const SizedBox(height: 20),
 
-            // Lịch trình
             const Text("Lịch trình", style: TextStyle(fontSize: 16)),
-            DropdownButton<Map<String, int>>(
+            DropdownButton<DayNightOption>(
               value: selectedDayNight,
               hint: const Text("Chọn lịch trình"),
               isExpanded: true,
               items: dayNightOptions.map((option) {
-                final day = option["day"]!;
-                final night = option["night"]!;
                 return DropdownMenuItem(
                   value: option,
-                  child: Text('$day ngày $night đêm'),
+                  child: Text(option.toString()),
                 );
               }).toList(),
               onChanged: (value) {
@@ -139,7 +165,6 @@ class _FilterDrawerState extends State<FilterDrawer> {
 
             const SizedBox(height: 20),
 
-            // Địa điểm từ Firestore
             const Text("Địa điểm", style: TextStyle(fontSize: 16)),
             diaDiemDocs.isEmpty
                 ? const Center(child: CircularProgressIndicator())
@@ -163,15 +188,14 @@ class _FilterDrawerState extends State<FilterDrawer> {
 
             const SizedBox(height: 30),
 
-            // Nút áp dụng
             ElevatedButton(
               onPressed: () {
                 final filters = {
                   "maxPrice": selectedPrice,
                   "people": selectedPeople,
                   "id_dia_diem": selectedDiaDiemId,
-                  "days": selectedDayNight?["day"],
-                  "nights": selectedDayNight?["night"],
+                  "days": selectedDayNight?.day,
+                  "nights": selectedDayNight?.night,
                 };
 
                 widget.onApply(filters);
