@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class SetPeopleNum extends StatefulWidget {
   final int peopleNum; // so nguoi
   final int cost; // chi phi
   final ValueChanged<int> onSetPeople;
   final ValueChanged<int> onSetCost;
+  final String diaDiemId;
+  final String tripId;
   const SetPeopleNum({
     super.key,
     required this.peopleNum,
     required this.cost,
     required this.onSetPeople,
     required this.onSetCost,
+    required this.diaDiemId,
+    required this.tripId,
   });
+
 
   @override
   State<SetPeopleNum> createState() => _SetPeopleNumState();
@@ -28,11 +35,24 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
     peopleNum = widget.peopleNum;
     cost = widget.cost;
   }
-  void _setCost(){
+  Future<void> _updateFirestorePeopleAndCost() async {
+    await FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.diaDiemId)
+        .collection('trips')
+        .doc(widget.tripId)
+        .update({
+      'so_nguoi': peopleNum,
+      'chi_phi': cost,
+    });
+  }
+
+  void _setCost() {
     setState(() {
-      cost = (widget.cost*peopleNum)~/widget.peopleNum;
+      cost = (widget.cost * peopleNum) ~/ widget.peopleNum;
       widget.onSetCost(cost);
     });
+    _updateFirestorePeopleAndCost();
   }
   void _incremetPeople(){
     if(peopleNum < 50){

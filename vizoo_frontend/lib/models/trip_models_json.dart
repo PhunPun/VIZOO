@@ -15,6 +15,7 @@ class Trip {
   final int soEat;
   final int soNgay;
   final int soNguoi;
+  final bool status;
 
   Trip({
     required this.id,
@@ -30,6 +31,7 @@ class Trip {
     required this.soEat,
     required this.soNgay,
     required this.soNguoi,
+    required this.status,
   });
 
 
@@ -38,19 +40,20 @@ class Trip {
     required String locationId,
   }) {
     return Trip(
-      id: id,
-      locationId: locationId,
-      name: json['name'] as String,
-      anh: json['anh'] as String,
-      chiPhi: json['chi_phi'] as int,
-      danhGia: json['danh_gia'] as int,
-      love: json['love'] as bool,
-      ngayBatDau: (json['ngay_bat_dau'] as Timestamp).toDate(),
-      noiO: json['noi_o'] as String,
-      soAct: json['so_act'] as int,
-      soEat: json['so_eat'] as int,
-      soNgay: json['so_ngay'] as int,
-      soNguoi: json['so_nguoi'] as int,
+        id: id,
+        locationId: locationId,
+        name: json['name'] as String,
+        anh: json['anh'] as String,
+        chiPhi: json['chi_phi'] as int,
+        danhGia: json['danh_gia'] as int,
+        love: json['love'] as bool,
+        ngayBatDau: (json['ngay_bat_dau'] as Timestamp).toDate(),
+        noiO: json['noi_o'] as String,
+        soAct: json['so_act'] as int,
+        soEat: json['so_eat'] as int,
+        soNgay: json['so_ngay'] as int,
+        soNguoi: json['so_nguoi'] as int,
+        status: json['status'] is bool,
     );
   }
 
@@ -67,6 +70,7 @@ class Trip {
       'so_eat': soEat,
       'so_ngay': soNgay,
       'so_nguoi': soNguoi,
+      'status': status,
     };
   }
   Trip copyWith({
@@ -83,6 +87,7 @@ class Trip {
     int? soEat,
     int? soNgay,
     int? soNguoi,
+    bool? status,
   }) {
     return Trip(
       id: id ?? this.id,
@@ -98,6 +103,7 @@ class Trip {
       soEat: soEat ?? this.soEat,
       soNgay: soNgay ?? this.soNgay,
       soNguoi: soNguoi ?? this.soNguoi,
+      status: status ?? this.status,
     );
   }
 }

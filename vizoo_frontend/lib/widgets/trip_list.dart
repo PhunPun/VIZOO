@@ -53,7 +53,6 @@ class TripList extends StatelessWidget {
             return TripCard(
               trip: trip,
               onTap: () {
-                print('👉 Tapped trip: ${trip.name}');
                 Navigator.push(
                   context,
                   MaterialPageRoute(
