@@ -1,15 +1,74 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 
 class SetTime extends StatefulWidget {
-  const SetTime({super.key});
+  final String diaDiemId;
+  final String tripId;
+  final String timelineId;
+  final String scheduleId;
+
+  const SetTime({
+    super.key,
+    required this.diaDiemId,
+    required this.tripId,
+    required this.timelineId,
+    required this.scheduleId,
+  });
 
   @override
   State<SetTime> createState() => _SetTimeState();
 }
 
+
 class _SetTimeState extends State<SetTime> {
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialTimeFromFirestore();
+  }
+
+  Future<void> _loadInitialTimeFromFirestore() async {
+    // Kiểm tra các ID có rỗng không
+    if (widget.diaDiemId.isEmpty ||
+        widget.tripId.isEmpty ||
+        widget.timelineId.isEmpty ||
+        widget.scheduleId.isEmpty) {
+      debugPrint('Không thể truy cập Firestore');
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('dia_diem')
+          .doc(widget.diaDiemId)
+          .collection('trips')
+          .doc(widget.tripId)
+          .collection('timelines')
+          .doc(widget.timelineId)
+          .collection('schedule')
+          .doc(widget.scheduleId)
+          .get();
+
+      if (doc.exists && doc.data()!.containsKey('hour')) {
+        final hourStr = doc['hour'] as String;
+        final parts = hourStr.split(':');
+        if (parts.length == 2) {
+          final int hour = int.parse(parts[0]);
+          final int minute = int.parse(parts[1]);
+
+          setState(() {
+            _selectedTime = TimeOfDay(hour: hour, minute: minute);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Lỗi khi lấy dữ liệu giờ từ Firestore: $e');
+    }
+  }
+
+
   TimeOfDay _selectedTime = const TimeOfDay(hour: 21, minute: 0);
 
   String _formatTime(TimeOfDay time) {
@@ -17,7 +76,24 @@ class _SetTimeState extends State<SetTime> {
     final minutes = time.minute.toString().padLeft(2, '0');
     return '$hours:$minutes';
   }
+  Future<void> _updateTimeInFirestore(TimeOfDay selectedTime) async {
+    final hourFormatted = selectedTime.hour.toString().padLeft(2, '0') + ":" +
+        selectedTime.minute.toString().padLeft(2, '0');
 
+    final docRef = FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.diaDiemId)
+        .collection('trips')
+        .doc(widget.tripId)
+        .collection('timelines')
+        .doc(widget.timelineId)
+        .collection('schedule')
+        .doc(widget.scheduleId);
+
+    await docRef.update({
+      'hour': hourFormatted,
+    });
+  }
 
   Future<void> _showTimePickerDialog(BuildContext context) async {
     final int initialHour = _selectedTime.hour;
@@ -167,8 +243,10 @@ class _SetTimeState extends State<SetTime> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); 
+              onPressed: () async {
+                await _updateTimeInFirestore(_selectedTime);
+                await _loadInitialTimeFromFirestore();
+                Navigator.of(context).pop();
               },
               child: const Text(
                 'OK',

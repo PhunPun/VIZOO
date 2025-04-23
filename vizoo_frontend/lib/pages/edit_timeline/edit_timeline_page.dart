@@ -1,4 +1,6 @@
 import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
@@ -15,6 +17,10 @@ class EditTimelinePage extends StatefulWidget {
   final bool completed;
   final String categories;
   final String diaDiemId;
+  final String tripId;
+  final String timelineId;
+  final String scheduleId;
+
   const EditTimelinePage({
     super.key,
     required this.time,
@@ -24,6 +30,9 @@ class EditTimelinePage extends StatefulWidget {
     required this.completed,
     required this.categories,
     required this.diaDiemId,
+    required this.tripId,
+    required this.timelineId,
+    required this.scheduleId,
   });
 
   @override
@@ -32,19 +41,33 @@ class EditTimelinePage extends StatefulWidget {
 
 class _EditTimelinePageState extends State<EditTimelinePage> {
   late String actCategories;
-  bool isCompleted = false;
+  late bool isCompleted;
 
   @override
   void initState() {
     super.initState();
-    // Khởi tạo từ categories truyền vào
     actCategories = widget.categories;
+    isCompleted = widget.completed;
   }
 
   void onChangeCategories(String newCategories) {
-    setState(() {
-      actCategories = newCategories;
-    });
+    setState(() => actCategories = newCategories);
+  }
+
+  Future<void> _toggleCompleted() async {
+    final newStatus = !isCompleted;
+    final docRef = FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.diaDiemId)
+        .collection('trips')
+        .doc(widget.tripId)
+        .collection('timelines')
+        .doc(widget.timelineId)
+        .collection('schedule')
+        .doc(widget.scheduleId);
+
+    await docRef.update({'status': newStatus});
+    setState(() => isCompleted = newStatus);
   }
   @override
   Widget build(BuildContext context) {
@@ -54,21 +77,19 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
         statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: Color(MyColor.white),
+        backgroundColor: const Color(MyColor.white),
         extendBodyBehindAppBar: true,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           systemOverlayStyle: SystemUiOverlayStyle.dark,
           leading: IconButton(
-            icon: Icon(
-              Platform.isIOS ? Icons.arrow_back_ios : Icons.arrow_back,
-            ),
+            icon: Icon(Platform.isIOS ? Icons.arrow_back_ios : Icons.arrow_back),
             onPressed: () => Navigator.of(context).pop(),
           ),
           actions: [
             Container(
-              margin: EdgeInsets.only(right: 5),
+              margin: const EdgeInsets.only(right: 5),
               child: SvgPicture.asset(
                 'assets/icons/logo.svg',
                 width: 98.79,
@@ -80,21 +101,29 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              SetTime(),
-              // Truyền actCategories từ state
+              // Widget chọn thời gian, đã lưu trữ trong Firestore
+              SetTime(
+                diaDiemId: widget.diaDiemId,
+                tripId: widget.tripId,
+                timelineId: widget.timelineId,
+                scheduleId: widget.scheduleId,
+              ),
+
+              // Widget chọn danh mục hoạt động
               SetActivities(
                 actCategories: actCategories,
                 onChangeCategories: onChangeCategories,
               ),
-              // Truyền actCategories xuống ActList để filter
+
+              // Danh sách hoạt động (lọc theo danh mục)
               ActList(
                 diaDiemId: widget.diaDiemId,
                 categories: actCategories,
               ),
 
-              // Phần "Đánh dấu đã hoàn thành"
+              // Nút đánh dấu hoàn thành
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   border: Border(
@@ -112,26 +141,39 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                     ),
                     Expanded(
                       flex: 1,
-                      child: Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.black, width: 2),
-                          color: isCompleted ? Color(MyColor.pr2) : Colors.transparent,
-                        ),
-                        child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              isCompleted = !isCompleted;
-                            });
-                          },
+                      child: InkWell(
+                        onTap: () async {
+                          try {
+                            await _toggleCompleted();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  isCompleted
+                                      ? 'Đã đánh dấu hoàn thành'
+                                      : 'Bỏ đánh dấu hoàn thành',
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Lỗi: $e')),
+                            );
+                          }
+                        },
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.black, width: 2),
+                            color: isCompleted ? Color(MyColor.pr2) : Colors.transparent,
+                          ),
                           child: isCompleted
                               ? const Icon(Icons.check, color: Color(MyColor.pr5), size: 16)
                               : null,
                         ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
