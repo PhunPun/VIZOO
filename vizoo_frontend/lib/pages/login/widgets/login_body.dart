@@ -4,12 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/apps/router/router_name.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-
 import 'auth_service.dart';
 
 class LoginBody extends StatefulWidget {
   const LoginBody({super.key});
+
 
   @override
   State<LoginBody> createState() => _LoginBodyState();
@@ -17,6 +16,9 @@ class LoginBody extends StatefulWidget {
 
 class _LoginBodyState extends State<LoginBody> {
   final AuthService _authService = AuthService();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +39,7 @@ class _LoginBodyState extends State<LoginBody> {
             margin: EdgeInsets.only(left: 50, right: 50, top: 30),
             constraints: BoxConstraints(maxHeight: 38),
             child: TextField(
+              controller: _emailController,
               decoration: InputDecoration(
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 8,
@@ -59,6 +62,8 @@ class _LoginBodyState extends State<LoginBody> {
             margin: EdgeInsets.only(left: 50, right: 50, top: 30),
             constraints: BoxConstraints(maxHeight: 38),
             child: TextField(
+              controller: _passwordController,
+              obscureText: true,
               decoration: InputDecoration(
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 8,
@@ -98,7 +103,19 @@ class _LoginBodyState extends State<LoginBody> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () async {
-              context.goNamed(RouterName.home);
+              String email = _emailController.text.trim();
+              String password = _passwordController.text.trim();
+              User? user = await _authService.signInWithEmail(email, password);
+              if (user != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Đăng nhập thành công")),
+                );
+                context.goNamed(RouterName.home);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Đăng nhập thất bại")),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(MyColor.pr4),
