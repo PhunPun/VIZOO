@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/widgets/set_day_start.dart';
 import 'package:vizoo_frontend/widgets/set_people_num.dart';
 import 'package:vizoo_frontend/pages/timeline/widgets/timeline_list.dart';
@@ -119,11 +120,15 @@ class _TimelineBodyState extends State<TimelineBody> {
             cost: tripData!.chiPhi,
             onSetPeople: onSetPeople,
             onSetCost: onSetCost,
+            diaDiemId: widget.locationId,
+            tripId: widget.tripId,
           ),
           SetDayStart(
             dateStart: initDate,
             numberDay: tripData!.soNgay,
             onChangeDate: onChangeDate,
+            locationId: widget.locationId,
+            tripId: widget.tripId,
           ),
           const SizedBox(height: 16),
 
@@ -150,6 +155,56 @@ class _TimelineBodyState extends State<TimelineBody> {
                 locationId: widget.locationId,
               );
             }).toList(),
+          Container(
+            padding: const EdgeInsets.only(bottom: 30),
+            child:
+            Center(
+              child: tripData == null
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                onPressed: tripData!.status == null
+                    ? null
+                    : () async {
+                  try {
+                    final newStatus = !tripData!.status!;
+                    await FirebaseFirestore.instance
+                        .collection('dia_diem')
+                        .doc(widget.locationId)
+                        .collection('trips')
+                        .doc(widget.tripId)
+                        .update({'status': newStatus});
+
+                    setState(() {
+                      tripData = tripData!.copyWith(status: newStatus);
+                    });
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đã cập nhật trạng thái thành công')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Lỗi khi cập nhật: $e')),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(MyColor.pr4),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  tripData!.status! ? 'Dừng hàng trình' : 'Áp dụng',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            )
+          ),
         ],
       ),
     );

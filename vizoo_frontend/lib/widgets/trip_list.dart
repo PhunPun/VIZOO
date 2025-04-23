@@ -51,7 +51,6 @@ class TripList extends StatelessWidget {
             return TripCard(
               trip: trip,
               onTap: () {
-                print('ldjbjdhvbkdjn/ldkvn.kjdhsv .kdjv fd/');
                 Navigator.push(
                   context,
                   MaterialPageRoute(

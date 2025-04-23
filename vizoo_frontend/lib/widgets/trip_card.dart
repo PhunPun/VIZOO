@@ -236,7 +236,7 @@
                         Row(
                           children: [
                             Text(
-                              'Noi ở: ',
+                              'Nơi ở: ',
                               style: TextStyle(
                                 color: Color(MyColor.black),
                                 fontSize: 16,
