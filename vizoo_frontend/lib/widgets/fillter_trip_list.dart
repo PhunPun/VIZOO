@@ -61,6 +61,7 @@ class FillterTripList extends StatelessWidget {
       }
 
       return trips;
+
     } catch (e) {
       throw Exception('Lỗi khi tải dữ liệu: $e');
     }

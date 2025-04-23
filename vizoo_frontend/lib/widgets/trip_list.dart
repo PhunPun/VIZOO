@@ -10,12 +10,14 @@ class TripList extends StatelessWidget {
   Future<List<Trip>> _fetchTrips() async {
     try {
       final snapshot = await FirebaseFirestore.instance
-          .collectionGroup('trips')
+          .collectionGroup('trips') // Lấy tất cả các trips từ mọi địa điểm
           .get();
 
       return snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         final tripId = doc.id;
+
+        // Trích locationId từ đường dẫn: dia_diem/{locationId}/trips/{tripId}
         final locationId = doc.reference.parent.parent?.id ?? '';
 
         return Trip.fromJson(data, id: tripId, locationId: locationId);

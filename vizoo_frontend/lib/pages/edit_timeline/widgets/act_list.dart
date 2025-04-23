@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -20,6 +21,7 @@ class ActList extends StatefulWidget {
 }
 
 class _ActListState extends State<ActList> {
+
   String? selectedActName;
   late Future<List<Activity>> _activityFuture;
 
@@ -99,6 +101,7 @@ class _ActListState extends State<ActList> {
             left: BorderSide(width: 4, color: Color(MyColor.pr3)),
             bottom: BorderSide(width: 0.2, color: Color(MyColor.pr3)),
           ),
+
         ),
         child: Row(
           children: [
@@ -108,6 +111,7 @@ class _ActListState extends State<ActList> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
+
                     act.name,
                     style: const TextStyle(
                       color: Color(MyColor.black),
@@ -123,6 +127,7 @@ class _ActListState extends State<ActList> {
                       fontWeight: FontWeight.w400,
                     ),
                   ),
+
                 ],
               ),
             ),
@@ -131,10 +136,12 @@ class _ActListState extends State<ActList> {
               child: Align(
                 alignment: Alignment.center,
                 child: Text(
+
                   "${NumberFormat('#,###', 'vi_VN').format(act.price)}đ",
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(MyColor.pr4),
+
                   ),
                 ),
               ),
@@ -158,3 +165,4 @@ class _ActListState extends State<ActList> {
     );
   }
 }
+

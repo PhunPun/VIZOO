@@ -69,7 +69,6 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
     await docRef.update({'status': newStatus});
     setState(() => isCompleted = newStatus);
   }
-
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -185,3 +184,4 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
     );
   }
 }
+

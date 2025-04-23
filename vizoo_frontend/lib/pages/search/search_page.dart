@@ -68,6 +68,7 @@ class _SearchPageState extends State<SearchPage> {
     _fetchSuggestions();
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

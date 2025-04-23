@@ -36,6 +36,7 @@ class _SetActivitiesState extends State<SetActivities> {
         .firstWhere((e) => e.value == widget.actCategories,
         orElse: () => const MapEntry('Ăn', 'eat'))
         .key;
+
   }
 
   @override
@@ -113,3 +114,4 @@ class _SetActivitiesState extends State<SetActivities> {
     );
   }
 }
+
