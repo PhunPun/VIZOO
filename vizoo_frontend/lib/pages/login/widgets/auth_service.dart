@@ -8,12 +8,12 @@ class AuthService {
 
   Future<User?> signInWithGoogle() async {
     try {
-      await _googleSignIn.signOut(); // xóa tài khoản trước (nếu cần)
+      await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
 
       final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      await googleUser.authentication;
 
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -21,10 +21,9 @@ class AuthService {
       );
 
       UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
+      await _auth.signInWithCredential(credential);
       User? user = userCredential.user;
 
-      // ✅ Thêm vào Firestore nếu đăng nhập thành công
       if (user != null) {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'uid': user.uid,
@@ -32,13 +31,58 @@ class AuthService {
           'displayName': user.displayName,
           'photoURL': user.photoURL,
           'lastSignIn': DateTime.now(),
-        }, SetOptions(merge: true)); // không ghi đè nếu đã tồn tại
+        }, SetOptions(merge: true));
       }
 
       return user;
     } catch (e) {
-      print("Đăng nhập thất bại: $e");
+      print("Đăng nhập Google thất bại: $e");
       return null;
+    }
+  }
+
+  Future<User?> signInWithEmail(String email, String password) async {
+    try {
+      UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return result.user;
+    } catch (e) {
+      print("Lỗi đăng nhập email: $e");
+      return null;
+    }
+  }
+
+  Future<User?> registerWithEmail(String email, String password, String username) async {
+    try {
+      UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      User? user = result.user;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'email': user.email,
+          'username': username,
+          'createdAt': DateTime.now(),
+        });
+      }
+      return user;
+    } catch (e) {
+      print("Lỗi đăng ký: $e");
+      return null;
+    }
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      print("Email đặt lại mật khẩu đã được gửi");
+    } catch (e) {
+      print("Lỗi khi gửi email đặt lại mật khẩu: $e");
+      rethrow;
     }
   }
 }
