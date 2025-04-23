@@ -152,7 +152,7 @@ class _TimelineBodyState extends State<TimelineBody> {
               return TimelineList(
                 numberDay: day,
                 timelineQuery: query,
-                locationId: widget.locationId,
+                locationId: widget.locationId, tripId: widget.tripId,
               );
             }).toList(),
           Container(
