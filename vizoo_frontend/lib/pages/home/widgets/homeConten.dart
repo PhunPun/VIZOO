@@ -16,12 +16,13 @@ class Homeconten extends StatefulWidget {
 class _HomecontenState extends State<Homeconten> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Map<String, dynamic> _filters = {};
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
       drawer: FilterDrawer(
-        initialFilters: _filters, // giữ lại bộ lọc cũ
+        initialFilters: _filters,
         onApply: (filters) {
           setState(() {
             _filters = filters;
@@ -36,13 +37,19 @@ class _HomecontenState extends State<Homeconten> {
               _scaffoldKey.currentState?.openDrawer();
             },
             onSearchTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SearchPage()),
-            );
-          },
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchPage()),
+              );
+            },
           ),
-          HomeHotLocations(),
+          HomeHotLocations(
+            onLocationSelected: (idDiaDiem) {
+              setState(() {
+                _filters['id_dia_diem'] = idDiaDiem;
+              });
+            },
+          ),
           HomeBody(filters: _filters),
         ],
       ),

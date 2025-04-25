@@ -2,6 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/apps/router/router_name.dart';
+import 'package:vizoo_frontend/pages/admin/admin_activity_page.dart';
+import 'package:vizoo_frontend/pages/admin/admin_page.dart';
+import 'package:vizoo_frontend/pages/admin/admin_user_page.dart';
 import 'package:vizoo_frontend/pages/change_password/change_password_page.dart';
 import 'package:vizoo_frontend/pages/edit_timeline/edit_timeline_page.dart';
 import 'package:vizoo_frontend/pages/forgot_password/forgot_password_page.dart';
@@ -36,39 +39,41 @@ class RouterCustum{
                 return const RegisterPage();
               },
             ),
-            GoRoute(
-              path: 'home',
-              name: RouterName.home,
-              builder: (BuildContext context, GoRouterState state) {
-                return const HomePage();
-              },
-            ),
-            GoRoute(
-              path: 'forgotPassword',
-              name: RouterName.forgotPassword,
-              builder: (BuildContext context, GoRouterState state) {
-                return const ForgotPasswordPage();
-              },
-              ),
-            GoRoute(
-              path: 'profile',
-              name: RouterName.profile,
-              builder: (BuildContext context, GoRouterState state) {
-                return const ProfileScreen();
-              },
-              routes: [
-                GoRoute(
-                  path: 'changePassword',
-                  name: RouterName.changePassword,
-                  builder: (BuildContext context, GoRouterState state) {
-                    return const ChangePasswordPage();
-                  },
-                ),
-              ]
-            ),
           ]
         ),
       ],
+    ),
+    GoRoute(
+      path: '/home',
+      name: RouterName.home,
+      builder: (BuildContext context, GoRouterState state) {
+        return const HomePage();
+      },
+      routes: [
+        GoRoute(
+          path: 'profile',
+          name: RouterName.profile,
+          builder: (BuildContext context, GoRouterState state) {
+            return const ProfileScreen();
+          },
+          routes: [
+            GoRoute(
+              path: 'changePassword',
+              name: RouterName.changePassword,
+              builder: (BuildContext context, GoRouterState state) {
+                return const ChangePasswordPage();
+              },
+            ),
+          ]
+        ),
+      ]
+    ),
+    GoRoute(
+      path: '/admin',
+      name: RouterName.admin,
+      builder: (BuildContext context, GoRouterState state) {
+        return const AdminPage();
+      },
     ),
   ],
 );

@@ -4,49 +4,55 @@ import 'package:vizoo_frontend/themes/colors/colors.dart';
 class LocationsCard extends StatelessWidget {
   final String ten;
   final String hinhAnh1;
+  final VoidCallback onTap;
+
   const LocationsCard({
     super.key,
     required this.ten,
-    required this.hinhAnh1
-    });
+    required this.hinhAnh1,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(left: 8),
-      child: Stack(
-        children: [
-          Container(
-            width: 92,
-            height: 137,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              image: DecorationImage(
-                image: NetworkImage(hinhAnh1),
-                fit: BoxFit.cover
-              )
-            ),
-          ),
-          Positioned(
-            bottom: 3,
-            left: 3,
-            child: Text(
-              ten,
-              style: TextStyle(
-                color: Color(MyColor.white),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                shadows: [
-                  Shadow(
-                    blurRadius: 4.0,
-                    color: Color(MyColor.black),
-                    offset: Offset(2, 2)
-                  )
-                ]
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(left: 8),
+        child: Stack(
+          children: [
+            Container(
+              width: 92,
+              height: 137,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                image: DecorationImage(
+                  image: NetworkImage(hinhAnh1),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          )
-        ],
+            Positioned(
+              bottom: 3,
+              left: 3,
+              child: Text(
+                ten,
+                style: TextStyle(
+                  color: Color(MyColor.white),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 4.0,
+                      color: Color(MyColor.black),
+                      offset: Offset(2, 2),
+                    )
+                  ],
+                ),
+              ),
+            )
+          ],
+        ),
       ),
     );
   }

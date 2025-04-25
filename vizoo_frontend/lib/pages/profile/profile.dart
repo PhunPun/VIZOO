@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/personal_info_screen.dart';
-import 'package:vizoo_frontend/pages/profile/widgets/completed_trip.dart'; 
+import 'package:vizoo_frontend/pages/profile/widgets/completed_trip.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/reviews_screen.dart';
-import 'package:vizoo_frontend/themes/colors/colors.dart'; 
+import 'package:vizoo_frontend/themes/colors/colors.dart';
+import 'package:vizoo_frontend/apps/router/router_name.dart';
+
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -76,19 +80,40 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _buildProfileOption(
-  context: context,
-  icon: Image.asset('assets/images/complain.png'),
-  title: 'Đánh giá',
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ReviewsScreen(),
-      ),
-    );
-  },
-),
-
+              context: context,
+              icon: Image.asset('assets/images/complain.png'),
+              title: 'Đánh giá',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReviewsScreen(),
+                  ),
+                );
+              },
+            ),
+            const Spacer(),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(MyColor.pr5),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.logout, color: Colors.white),
+              label: const Text(
+                "Đăng xuất",
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                if (context.mounted) {
+                  context.goNamed(RouterName.login);
+                }
+              },
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
