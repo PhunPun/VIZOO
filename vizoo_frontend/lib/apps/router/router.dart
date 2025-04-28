@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/apps/router/router_name.dart';
 import 'package:vizoo_frontend/pages/admin/admin_activity_page.dart';
 import 'package:vizoo_frontend/pages/admin/admin_page.dart';
+import 'package:vizoo_frontend/pages/admin/admin_trip_page.dart';
 import 'package:vizoo_frontend/pages/admin/admin_user_page.dart';
 import 'package:vizoo_frontend/pages/change_password/change_password_page.dart';
 import 'package:vizoo_frontend/pages/edit_timeline/edit_timeline_page.dart';

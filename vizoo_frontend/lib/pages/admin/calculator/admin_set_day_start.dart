@@ -5,14 +5,14 @@ import 'package:intl/intl.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/widgets/weather_card.dart';
 
-class SetDayStart extends StatefulWidget {
+class AdminSetDayStart extends StatefulWidget {
   final DateTime dateStart;
   final int numberDay;
   final ValueChanged<DateTime> onChangeDate;
   final String locationId;
   final String tripId;
 
-  const SetDayStart({
+  const AdminSetDayStart({
     super.key,
     required this.dateStart,
     required this.numberDay,
@@ -22,10 +22,10 @@ class SetDayStart extends StatefulWidget {
   });
 
   @override
-  State<SetDayStart> createState() => _SetDayStartState();
+  State<AdminSetDayStart> createState() => _AdminSetDayStartState();
 }
 
-class _SetDayStartState extends State<SetDayStart> {
+class _AdminSetDayStartState extends State<AdminSetDayStart> {
   late DateTime _selectedDate;
 
   @override
@@ -35,48 +35,47 @@ class _SetDayStartState extends State<SetDayStart> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      builder:
-          (ctx, child) => Theme(
-            data: Theme.of(ctx).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: Color(MyColor.pr4),
-                onPrimary: Colors.white,
-                surface: Colors.white,
-                onSurface: Colors.black,
-              ),
-              dialogTheme: DialogTheme(
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            child: child!,
+  final picked = await showDatePicker(
+    context: context,
+    initialDate: _selectedDate,
+    firstDate: DateTime(2000),
+    lastDate: DateTime(2100),
+    builder: (ctx, child) => Theme(
+      data: Theme.of(ctx).copyWith(
+        colorScheme: ColorScheme.light(
+          primary: Color(MyColor.pr4),
+          onPrimary: Colors.white,
+          surface: Colors.white,
+          onSurface: Colors.black,
+        ),
+        dialogTheme: DialogTheme(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
-    );
+        ),
+      ),
+      child: child!,
+    ),
+  );
 
-    if (picked != null && picked != _selectedDate) {
-      DateTime now = DateTime.now();
-      DateTime today = DateTime(now.year, now.month, now.day);
-      if (picked.isBefore(today)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể chọn ngày trong quá khứ!')),
-        );
-        return;
-      }
-
-      setState(() {
-        _selectedDate = picked;
-      });
-      widget.onChangeDate(_selectedDate);
-      await _updateFirestore(_selectedDate);
+  if (picked != null && picked != _selectedDate) {
+    DateTime now = DateTime.now();
+    DateTime today = DateTime(now.year, now.month, now.day); 
+    if (picked.isBefore(today)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể chọn ngày trong quá khứ!')),
+      );
+      return; 
     }
+
+    setState(() {
+      _selectedDate = picked;
+    });
+    widget.onChangeDate(_selectedDate);
+    await _updateFirestore(_selectedDate);
   }
+}
 
   Future<void> _updateFirestore(DateTime newDate) async {
     try {
@@ -85,12 +84,13 @@ class _SetDayStartState extends State<SetDayStart> {
           .doc(widget.locationId)
           .collection('trips')
           .doc(widget.tripId)
-          .update({'ngay_bat_dau': Timestamp.fromDate(newDate)});
+          .update({
+        'ngay_bat_dau': Timestamp.fromDate(newDate),
+      });
     } catch (e) {
       print('Lỗi cập nhật ngày bắt đầu Firestore: $e');
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -145,7 +145,10 @@ class _SetDayStartState extends State<SetDayStart> {
             margin: const EdgeInsets.only(left: 15, top: 4),
             color: const Color(MyColor.pr5),
           ),
-          WeatherCard(diaDiemId: widget.locationId, tripId: widget.tripId),
+          WeatherCard(
+            diaDiemId: widget.locationId,
+            tripId: widget.tripId,
+          ),
         ],
       ),
     );

@@ -10,56 +10,46 @@ class WelcomeBody extends StatelessWidget {
   void addSampleActivities() async {
   final activitiesRef = FirebaseFirestore.instance
       .collection("dia_diem")
-      .doc("6cHdpF1FDYcERqUEvzCz")
+      .doc("4eJDHyp6eYbE1G8RwMyw") // Đà Lạt
       .collection('activities');
 
   // --- eat ---
-  await activitiesRef.add({'name': 'Bún bò Huế', 'address': '45 Lê Lợi, Đà Nẵng', 'categories': 'eat', 'price': 35000});
-  await activitiesRef.add({'name': 'Mì Quảng', 'address': '23 Nguyễn Văn Linh, Đà Nẵng', 'categories': 'eat', 'price': 30000});
-  await activitiesRef.add({'name': 'Bánh tráng thịt heo', 'address': '12 Nguyễn Tri Phương, Đà Nẵng', 'categories': 'eat', 'price': 45000});
-  await activitiesRef.add({'name': 'Cao lầu Hội An', 'address': '101 Trần Phú, Đà Nẵng', 'categories': 'eat', 'price': 40000});
-  await activitiesRef.add({'name': 'Gỏi cuốn', 'address': '17 Phan Đình Phùng, Đà Nẵng', 'categories': 'eat', 'price': 25000});
-  await activitiesRef.add({'name': 'Bánh xèo', 'address': '66 Lê Duẩn, Đà Nẵng', 'categories': 'eat', 'price': 30000});
-  await activitiesRef.add({'name': 'Nem lụi', 'address': '19 Hoàng Diệu, Đà Nẵng', 'categories': 'eat', 'price': 35000});
-  await activitiesRef.add({'name': 'Bún mắm nêm', 'address': '88 Nguyễn Chí Thanh, Đà Nẵng', 'categories': 'eat', 'price': 25000});
-  await activitiesRef.add({'name': 'Chè sầu', 'address': '55 Hải Phòng, Đà Nẵng', 'categories': 'eat', 'price': 20000});
-  await activitiesRef.add({'name': 'Cơm gà', 'address': '31 Pasteur, Đà Nẵng', 'categories': 'eat', 'price': 40000});
+  await activitiesRef.add({'name': 'Bánh căn Nhà Chung', 'address': '13 Nhà Chung, Đà Lạt', 'categories': 'eat', 'price': 30000});
+  await activitiesRef.add({'name': 'Nem nướng Bà Hùng', 'address': '254 Phan Đình Phùng, Đà Lạt', 'categories': 'eat', 'price': 50000});
+  await activitiesRef.add({'name': 'Lẩu gà lá é Tao Ngộ', 'address': '5 3 Tháng 4, Đà Lạt', 'categories': 'eat', 'price': 200000});
+  await activitiesRef.add({'name': 'Bánh mì xíu mại Hoàng Diệu', 'address': '26 Hoàng Diệu, Đà Lạt', 'categories': 'eat', 'price': 25000});
+  await activitiesRef.add({'name': 'Bánh ướt lòng gà Long', 'address': '202 Phan Đình Phùng, Đà Lạt', 'categories': 'eat', 'price': 40000});
+  await activitiesRef.add({'name': 'Cháo ếch Singapore 151', 'address': '151 Bùi Thị Xuân, Đà Lạt', 'categories': 'eat', 'price': 60000});
 
   // --- drink ---
-  await activitiesRef.add({'name': 'Cà phê Highlands', 'address': '10 Bạch Đằng, Đà Nẵng', 'categories': 'drink', 'price': 55000});
-  await activitiesRef.add({'name': 'Trà sữa Tocotoco', 'address': '78 Phan Châu Trinh, Đà Nẵng', 'categories': 'drink', 'price': 50000});
-  await activitiesRef.add({'name': 'Gong Cha', 'address': '99 Nguyễn Văn Linh, Đà Nẵng', 'categories': 'drink', 'price': 52000});
-  await activitiesRef.add({'name': 'Cộng Cà Phê', 'address': '34 Lê Lợi, Đà Nẵng', 'categories': 'drink', 'price': 50000});
-  await activitiesRef.add({'name': 'Memory Lounge', 'address': '32 Bạch Đằng, Đà Nẵng', 'categories': 'drink', 'price': 60000});
-  await activitiesRef.add({'name': 'The Coffee House', 'address': '56 Nguyễn Tri Phương, Đà Nẵng', 'categories': 'drink', 'price': 45000});
-  await activitiesRef.add({'name': 'Phúc Long', 'address': '80 Lê Duẩn, Đà Nẵng', 'categories': 'drink', 'price': 55000});
-  await activitiesRef.add({'name': 'Urban Station', 'address': '22 Hoàng Diệu, Đà Nẵng', 'categories': 'drink', 'price': 40000});
-  await activitiesRef.add({'name': 'Guta Cafe', 'address': '105 Trần Phú, Đà Nẵng', 'categories': 'drink', 'price': 35000});
-  await activitiesRef.add({'name': 'Zone 7 Cafe', 'address': '07 Nguyễn Chí Thanh, Đà Nẵng', 'categories': 'drink', 'price': 45000});
+  await activitiesRef.add({'name': 'Cafe Tùng', 'address': '06 Khu Hòa Bình, Đà Lạt', 'categories': 'drink', 'price': 50000});
+  await activitiesRef.add({'name': 'An Cafe', 'address': '63Bis Đường 3/2, Đà Lạt', 'categories': 'drink', 'price': 60000});
+  await activitiesRef.add({'name': 'The Married Beans', 'address': '6 Nguyễn Chí Thanh, Đà Lạt', 'categories': 'drink', 'price': 70000});
+  await activitiesRef.add({'name': 'La Viet Coffee', 'address': '200 Nguyễn Công Trứ, Đà Lạt', 'categories': 'drink', 'price': 70000});
+  await activitiesRef.add({'name': 'Dalaland', 'address': 'Đèo Mimosa, Đà Lạt', 'categories': 'drink', 'price': 90000});
+  await activitiesRef.add({'name': 'The Wilder Nest', 'address': 'Đèo Prenn, Đà Lạt', 'categories': 'drink', 'price': 80000});
+  await activitiesRef.add({'name': 'Cafe Panorama', 'address': 'Đèo Trại Mát, Đà Lạt', 'categories': 'drink', 'price': 80000});
 
   // --- play ---
-  await activitiesRef.add({'name': 'Tắm biển Mỹ Khê', 'address': 'Bãi biển Mỹ Khê, Đà Nẵng', 'categories': 'play', 'price': 0});
-  await activitiesRef.add({'name': 'Leo núi Ngũ Hành Sơn', 'address': 'Quận Ngũ Hành Sơn, Đà Nẵng', 'categories': 'play', 'price': 20000});
-  await activitiesRef.add({'name': 'Du thuyền sông Hàn', 'address': 'Bến sông Hàn, Đà Nẵng', 'categories': 'play', 'price': 100000});
-  await activitiesRef.add({'name': 'Asia Park', 'address': '01 Phan Đăng Lưu, Đà Nẵng', 'categories': 'play', 'price': 200000});
-  await activitiesRef.add({'name': 'Bảo tàng Chăm', 'address': '02 Trưng Nữ Vương, Đà Nẵng', 'categories': 'play', 'price': 40000});
-  await activitiesRef.add({'name': 'Công viên Biển Đông', 'address': 'Võ Nguyên Giáp, Đà Nẵng', 'categories': 'play', 'price': 0});
-  await activitiesRef.add({'name': 'Sun Wheel', 'address': 'Asia Park, Đà Nẵng', 'categories': 'play', 'price': 150000});
-  await activitiesRef.add({'name': 'Cầu Rồng phun lửa', 'address': 'Cầu Rồng, Đà Nẵng', 'categories': 'play', 'price': 0});
-  await activitiesRef.add({'name': 'Ngắm bán đảo Sơn Trà', 'address': 'Sơn Trà, Đà Nẵng', 'categories': 'play', 'price': 0});
-  await activitiesRef.add({'name': 'Làng đá Non Nước', 'address': 'Ngũ Hành Sơn, Đà Nẵng', 'categories': 'play', 'price': 30000});
+  await activitiesRef.add({'name': 'Thung lũng Tình Yêu', 'address': '07 Mai Anh Đào, Đà Lạt', 'categories': 'play', 'price': 250000});
+  await activitiesRef.add({'name': 'Hồ Xuân Hương', 'address': 'Trung tâm thành phố, Đà Lạt', 'categories': 'play', 'price': 0});
+  await activitiesRef.add({'name': 'Langbiang', 'address': 'Lạc Dương, Đà Lạt', 'categories': 'play', 'price': 50000});
+  await activitiesRef.add({'name': 'Đồi chè Cầu Đất', 'address': 'Xuân Trường, Đà Lạt', 'categories': 'play', 'price': 30000});
+  await activitiesRef.add({'name': 'Chợ đêm Đà Lạt', 'address': 'Nguyễn Thị Minh Khai, Đà Lạt', 'categories': 'play', 'price': 0});
+  await activitiesRef.add({'name': 'Nhà thờ Con Gà', 'address': '15 Trần Phú, Đà Lạt', 'categories': 'play', 'price': 0});
+  await activitiesRef.add({'name': 'Dinh Bảo Đại', 'address': '01 Triệu Việt Vương, Đà Lạt', 'categories': 'play', 'price': 40000});
+  await activitiesRef.add({'name': 'Quảng trường Lâm Viên', 'address': 'Trần Quốc Toản, Đà Lạt', 'categories': 'play', 'price': 0});
+  await activitiesRef.add({'name': 'Crazy House', 'address': '03 Huỳnh Thúc Kháng, Đà Lạt', 'categories': 'play', 'price': 60000});
 
   // --- hotel ---
-  await activitiesRef.add({'name': 'Khách sạn Novotel', 'address': '36 Bạch Đằng, Đà Nẵng', 'categories': 'hotel', 'price': 1200000});
-  await activitiesRef.add({'name': 'Mường Thanh Luxury', 'address': '270 Võ Nguyên Giáp, Đà Nẵng', 'categories': 'hotel', 'price': 900000});
-  await activitiesRef.add({'name': 'Furama Resort', 'address': 'Võ Nguyên Giáp, Đà Nẵng', 'categories': 'hotel', 'price': 2500000});
-  await activitiesRef.add({'name': 'Golden Bay', 'address': 'Lê Văn Duyệt, Đà Nẵng', 'categories': 'hotel', 'price': 1600000});
-  await activitiesRef.add({'name': 'Vanda Hotel', 'address': '03 Nguyễn Văn Linh, Đà Nẵng', 'categories': 'hotel', 'price': 850000});
-  await activitiesRef.add({'name': 'Minh Toàn Galaxy', 'address': '306 2/9, Đà Nẵng', 'categories': 'hotel', 'price': 950000});
-  await activitiesRef.add({'name': 'Sala Danang Beach', 'address': '36 Lâm Hoành, Đà Nẵng', 'categories': 'hotel', 'price': 1100000});
-  await activitiesRef.add({'name': 'A La Carte Hotel', 'address': '200 Võ Nguyên Giáp, Đà Nẵng', 'categories': 'hotel', 'price': 1300000});
-  await activitiesRef.add({'name': 'Serene Beach Hotel', 'address': '274 Võ Nguyên Giáp, Đà Nẵng', 'categories': 'hotel', 'price': 800000});
-  await activitiesRef.add({'name': 'Grand Tourane Hotel', 'address': '252 Võ Nguyên Giáp, Đà Nẵng', 'categories': 'hotel', 'price': 1000000});
+  await activitiesRef.add({'name': 'Dalat Palace Heritage Hotel', 'address': '02 Trần Phú, Đà Lạt', 'categories': 'hotel', 'price': 5000000});
+  await activitiesRef.add({'name': 'Ana Mandara Villas Dalat Resort & Spa', 'address': 'Le Lai, Đà Lạt', 'categories': 'hotel', 'price': 4000000});
+  await activitiesRef.add({'name': 'Terracotta Hotel & Resort', 'address': 'Zone 7.9, Tuyền Lâm Lake, Đà Lạt', 'categories': 'hotel', 'price': 3000000});
+  await activitiesRef.add({'name': 'Dalat Edensee Lake Resort & Spa', 'address': 'Tuyền Lâm Lake, Đà Lạt', 'categories': 'hotel', 'price': 4500000});
+  await activitiesRef.add({'name': 'Swiss-BelResort Tuyen Lam', 'address': 'Zone 7&8, Tuyền Lâm Lake, Đà Lạt', 'categories': 'hotel', 'price': 2500000});
+  await activitiesRef.add({'name': 'Ladalat Hotel', 'address': '106A Mai Anh Đào, Đà Lạt', 'categories': 'hotel', 'price': 2000000});
+  await activitiesRef.add({'name': 'Colline Hotel', 'address': '10 Phan Bội Châu, Đà Lạt', 'categories': 'hotel', 'price': 1800000});
+  await activitiesRef.add({'name': 'Mường Thanh Holiday Đà Lạt', 'address': '42 Phan Bội Châu, Đà Lạt', 'categories': 'hotel', 'price': 1700000});
 }
 
   void addScheduleItems() async {
@@ -100,82 +90,82 @@ class WelcomeBody extends StatelessWidget {
 void addSampleTripsDaNang() async {
   final tripRef = FirebaseFirestore.instance
       .collection("dia_diem")
-      .doc("6cHdpF1FDYcERqUEvzCz")
+      .doc("4eJDHyp6eYbE1G8RwMyw")
       .collection("trips");
 
-  final List<Map<String, dynamic>> daNangTrips = [
+  final List<Map<String, dynamic>> daLatTrips = [
     {
-      'anh': 'https://i.pinimg.com/736x/00/a3/7f/00a37fd9c7479911e36ba748d139e425.jpg',
-      'chi_phi': 1500000,
-      'danh_gia': 4,
-      'love': false,
-      'name': 'Du lịch Đà Nẵng',
-      'ngay_bat_dau': '18/04/2024',
-      'noi_o': 'Nhà nghỉ An Bình',
-      'so_act': 15,
-      'so_eat': 9,
-      'so_ngay': 3,
-      'so_nguoi': 1,
-    },
-    {
-      'anh': 'https://i.pinimg.com/736x/aa/64/23/aa6423a37266eed99f8dffecfa8eef84.jpg',
-      'chi_phi': 2200000,
-      'danh_gia': 5,
-      'love': true,
-      'name': 'Khám phá Đà Nẵng',
-      'ngay_bat_dau': '20/05/2024',
-      'noi_o': 'Khách sạn Hương Biển',
-      'so_act': 12,
-      'so_eat': 7,
-      'so_ngay': 2,
-      'so_nguoi': 2,
-    },
-    {
-      'anh': 'https://i.pinimg.com/736x/41/85/b6/4185b62acb34fc7ffae350e31256e424.jpg',
-      'chi_phi': 3000000,
-      'danh_gia': 3,
-      'love': false,
-      'name': 'Trải nghiệm Đà Nẵng',
-      'ngay_bat_dau': '05/06/2024',
-      'noi_o': 'Resort Biển Xanh',
-      'so_act': 10,
-      'so_eat': 6,
-      'so_ngay': 4,
-      'so_nguoi': 3,
-    },
-    {
-      'anh': 'https://i.pinimg.com/736x/7d/54/e2/7d54e239d8c77eb6a9b81785ef5b3889.jpg',
-      'chi_phi': 2700000,
-      'danh_gia': 4,
-      'love': true,
-      'name': 'Food tour Đà Nẵng',
-      'ngay_bat_dau': '15/06/2024',
-      'noi_o': 'Khách sạn Sunlight',
-      'so_act': 9,
-      'so_eat': 9,
-      'so_ngay': 2,
-      'so_nguoi': 2,
-    },
-    {
-      'anh': 'https://i.pinimg.com/736x/cf/d6/91/cfd691aae696bc98bcf413bb92f8363a.jpg',
+      'anh': 'https://i.pinimg.com/736x/55/10/44/5510445ad8e8391e48c41cad589f584b.jpg',
       'chi_phi': 1800000,
       'danh_gia': 5,
-      'love': false,
-      'name': 'Tham quan Đà Nẵng',
-      'ngay_bat_dau': '01/07/2024',
-      'noi_o': 'Homestay Đà Nẵng Xanh',
-      'so_act': 11,
-      'so_eat': 8,
+      'love': true,
+      'name': 'Đà Lạt mùa hoa',
+      'ngay_bat_dau': '10/05/2024',
+      'noi_o': 'Khách sạn TTC Đà Lạt',
+      'so_act': 9,
+      'so_eat': 7,
       'so_ngay': 3,
+      'so_nguoi': 2,
+    },
+    {
+      'anh': 'https://i.pinimg.com/736x/bc/83/ba/bc83bab6fb507b149f3d64b5e29049cf.jpg',
+      'chi_phi': 2000000,
+      'danh_gia': 4,
+      'love': false,
+      'name': 'Food Tour Đà Lạt',
+      'ngay_bat_dau': '20/05/2024',
+      'noi_o': 'Homestay Dalat Note',
+      'so_act': 8,
+      'so_eat': 9,
+      'so_ngay': 2,
       'so_nguoi': 1,
+    },
+    {
+      'anh': 'https://i.pinimg.com/736x/98/80/87/988087266d6cf95378682dd8a1675412.jpg',
+      'chi_phi': 2500000,
+      'danh_gia': 5,
+      'love': true,
+      'name': 'Săn mây đồi chè',
+      'ngay_bat_dau': '25/05/2024',
+      'noi_o': 'Ana Mandara Villas Dalat',
+      'so_act': 10,
+      'so_eat': 6,
+      'so_ngay': 3,
+      'so_nguoi': 2,
+    },
+    {
+      'anh': 'https://i.pinimg.com/736x/cb/fd/61/cbfd613328b9fd0d9a1d797ac7e46f75.jpg',
+      'chi_phi': 2200000,
+      'danh_gia': 4,
+      'love': false,
+      'name': 'Langbiang - khám phá',
+      'ngay_bat_dau': '01/06/2024',
+      'noi_o': 'Swiss-BelResort Tuyền Lâm',
+      'so_act': 7,
+      'so_eat': 5,
+      'so_ngay': 3,
+      'so_nguoi': 2,
+    },
+    {
+      'anh': 'https://i.pinimg.com/736x/e7/db/3c/e7db3c45dfae9090ad09bda9c0c81f5a.jpg',
+      'chi_phi': 2100000,
+      'danh_gia': 5,
+      'love': true,
+      'name': 'Đà Lạt săn dã quỳ',
+      'ngay_bat_dau': '08/06/2024',
+      'noi_o': 'Colline Hotel Dalat',
+      'so_act': 6,
+      'so_eat': 5,
+      'so_ngay': 2,
+      'so_nguoi': 2,
     },
   ];
 
-  for (var trip in daNangTrips) {
+  for (var trip in daLatTrips) {
     await tripRef.add(trip);
   }
 
-  print("✅ Đã thêm danh sách trips tại Đà Nẵng thành công!");
+  print("✅ Đã thêm danh sách trips tại Đà Lạt thành công!");
 }
 
   @override

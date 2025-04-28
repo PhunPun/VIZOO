@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/apps/router/router_name.dart';
 import 'package:vizoo_frontend/pages/admin/admin_activity_page.dart';
+import 'package:vizoo_frontend/pages/admin/admin_trip_page.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'admin_user_page.dart';
 
@@ -52,6 +53,8 @@ class _AdminPageState extends State<AdminPage> {
         return const AdminUserPage();
       case 'activity':
         return const AdminActivityPage();
+      case 'tour':
+        return const AdminTripPage();
       default:
         return const Center(child: Text("Chọn chức năng từ menu"));
     }
@@ -98,6 +101,14 @@ class _AdminPageState extends State<AdminPage> {
               title: const Text('Quản lý hoạt động'),
               onTap: () {
                 setState(() => _selectedPage = 'activity');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.event),
+              title: const Text('Quản lý tour'),
+              onTap: () {
+                setState(() => _selectedPage = 'tour');
                 Navigator.pop(context);
               },
             ),
