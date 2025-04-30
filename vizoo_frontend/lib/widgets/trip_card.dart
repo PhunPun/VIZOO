@@ -1,6 +1,6 @@
+  import 'dart:async';
 
-
-  import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
   import 'package:firebase_auth/firebase_auth.dart';
   import 'package:flutter/material.dart';
   import 'package:flutter_svg/flutter_svg.dart';
@@ -25,12 +25,36 @@
 
   class _TripCardState extends State<TripCard> {
     bool _loved = false;
+    int _loveCount = 0;
+    StreamSubscription? _loveSubscription;
+
+    void _listenToLoveCount() {
+      _loveSubscription = FirebaseFirestore.instance
+          .collection('love')
+          .where('trip_id', isEqualTo: widget.trip.id)
+          .snapshots()
+          .listen((snapshot) {
+        if (mounted) {
+          setState(() {
+            _loveCount = snapshot.docs.length;
+          });
+        }
+      });
+    }
+
+    @override
+    void dispose() {
+      _loveSubscription?.cancel(); // tránh rò rỉ bộ nhớ
+      super.dispose();
+    }
 
     @override
     void initState() {
       super.initState();
       _checkIfLoved();
+      _listenToLoveCount();
     }
+
     // Hàm định dạng ngày tháng
     String getFormattedDate(DateTime date) {
       return DateFormat("dd/MM/yyyy").format(date);
@@ -245,7 +269,7 @@
                             ),
                             ConstrainedBox(
                               constraints: BoxConstraints(
-                                maxWidth: 150, 
+                                maxWidth: 150,
                               ),
                               child: Text(
                                 widget.trip.noiO,
@@ -279,6 +303,21 @@
                             )
                           ],
                         ),
+                        Row(
+                          children: [
+                            Icon(Icons.favorite, color: Colors.red, size: 20),
+                            SizedBox(width: 4),
+                            Text(
+                              '$_loveCount lượt yêu thích',
+                              style: TextStyle(
+                                color: Color(MyColor.pr5),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+
                       ],
                     )
                   ],
