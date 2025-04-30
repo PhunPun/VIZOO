@@ -44,7 +44,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
     @override
     void dispose() {
-      _loveSubscription?.cancel(); // tránh rò rỉ bộ nhớ
+      _loveSubscription?.cancel();
       super.dispose();
     }
 
