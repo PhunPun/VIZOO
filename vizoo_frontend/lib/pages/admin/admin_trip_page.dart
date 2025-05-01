@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vizoo_frontend/pages/admin/widgets/add_trip_page.dart';
 import 'package:vizoo_frontend/pages/admin/widgets/admin_trip_body.dart';
 import 'package:vizoo_frontend/pages/home/widgets/home_header.dart';
 import 'package:vizoo_frontend/pages/home/widgets/home_hot_locations.dart';
@@ -49,14 +50,25 @@ class _AdminTripPageState extends State<AdminTripPage> {
               });
             },
           ),
-          AdminTripBody(filters: _filters,),
+          AdminTripBody(filters: _filters),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Color(MyColor.pr3),
-        onPressed: () {},
-        label: const Text("Thêm hoạt động", style: TextStyle(color: Color(MyColor.pr5)),),
-        icon: const Icon(Icons.add, color: Color(MyColor.pr5),),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddTripPage()),
+          );
+          if (result == true) {
+            setState(() {}); // cập nhật lại danh sách sau khi thêm
+          }
+        },
+        label: const Text(
+          "Thêm hoạt động",
+          style: TextStyle(color: Color(MyColor.pr5)),
+        ),
+        icon: const Icon(Icons.add, color: Color(MyColor.pr5)),
       ),
     );
   }

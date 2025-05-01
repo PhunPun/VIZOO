@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,7 +7,6 @@ import 'package:vizoo_frontend/pages/admin/admin_edit_timeline/widgets/admin_act
 import 'package:vizoo_frontend/pages/admin/admin_edit_timeline/widgets/admin_set_activities.dart';
 import 'package:vizoo_frontend/pages/admin/calculator/admin_set_time.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
-
 
 class AdminEditTimelinePage extends StatefulWidget {
   final TimeOfDay time;
@@ -21,6 +19,8 @@ class AdminEditTimelinePage extends StatefulWidget {
   final String tripId;
   final String timelineId;
   final String scheduleId;
+  final String actId;
+  final VoidCallback onRefreshTripData;
 
   const AdminEditTimelinePage({
     super.key,
@@ -34,6 +34,8 @@ class AdminEditTimelinePage extends StatefulWidget {
     required this.tripId,
     required this.timelineId,
     required this.scheduleId,
+    required this.actId,
+    required this.onRefreshTripData,
   });
 
   @override
@@ -69,7 +71,82 @@ class _AdminEditTimelinePageState extends State<AdminEditTimelinePage> {
 
     await docRef.update({'status': newStatus});
     setState(() => isCompleted = newStatus);
+    await _updateTripSummary(); // cập nhật sau khi đánh dấu
+    widget.onRefreshTripData();
   }
+
+  Future<void> _deleteSchedule() async {
+    final scheduleRef = FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.diaDiemId)
+        .collection('trips')
+        .doc(widget.tripId)
+        .collection('timelines')
+        .doc(widget.timelineId)
+        .collection('schedule')
+        .doc(widget.scheduleId);
+
+    await scheduleRef.delete();
+    await _updateTripSummary(); // 👈 cập nhật lại thông tin tổng
+    widget.onRefreshTripData();
+  }
+
+  Future<void> _updateTripSummary() async {
+    int soAct = 0;
+    int soEat = 0;
+    int tongChiPhi = 0;
+    String? noiO;
+
+    final timelinesSnap = await FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.diaDiemId)
+        .collection('trips')
+        .doc(widget.tripId)
+        .collection('timelines')
+        .get();
+
+    for (final timeline in timelinesSnap.docs) {
+      final scheduleSnap = await timeline.reference.collection('schedule').get();
+
+      for (final schedule in scheduleSnap.docs) {
+        final actId = schedule['act_id'];
+        if (actId == null || actId.toString().isEmpty) continue;
+
+        soAct++;
+
+        final actSnap = await FirebaseFirestore.instance
+            .collection('dia_diem')
+            .doc(widget.diaDiemId)
+            .collection('activities')
+            .doc(actId)
+            .get();
+
+        final actData = actSnap.data();
+        if (actData == null) continue;
+
+        final category = actData['categories'] ?? '';
+        final price = (actData['price'] as num?)?.toInt() ?? 0;
+        final name = actData['name'] ?? '';
+
+        if (category == 'eat') soEat++;
+        if (category == 'hotel') noiO = name;
+        tongChiPhi += price;
+      }
+    }
+
+    await FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.diaDiemId)
+        .collection('trips')
+        .doc(widget.tripId)
+        .update({
+      'so_act': soAct,
+      'so_eat': soEat,
+      'chi_phi': tongChiPhi,
+      'noi_o': noiO ?? 'chưa chọn',
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -96,86 +173,73 @@ class _AdminEditTimelinePageState extends State<AdminEditTimelinePage> {
                 width: 98.79,
                 height: 28.26,
               ),
-            )
+            ),
           ],
         ),
         body: SingleChildScrollView(
           child: Column(
             children: [
-              // Widget chọn thời gian, đã lưu trữ trong Firestore
               AdminSetTime(
                 diaDiemId: widget.diaDiemId,
                 tripId: widget.tripId,
                 timelineId: widget.timelineId,
                 scheduleId: widget.scheduleId,
               ),
-
-              // Widget chọn danh mục hoạt động
               AdminSetActivities(
                 actCategories: actCategories,
                 onChangeCategories: onChangeCategories,
               ),
-
-              // Danh sách hoạt động (lọc theo danh mục)
               AdminActList(
                 diaDiemId: widget.diaDiemId,
+                tripId: widget.tripId,
+                timelineId: widget.timelineId,
+                scheduleId: widget.scheduleId,
                 categories: actCategories,
+                selectedActId: widget.actId,
+                onRefreshTripData: widget.onRefreshTripData,
               ),
-
-              // Nút đánh dấu hoàn thành
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(width: 1, color: Color(MyColor.pr5)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade50,
+                    foregroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    side: const BorderSide(color: Colors.red),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      flex: 8,
-                      child: Text(
-                        'Đánh dấu đã hoàn thành',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: InkWell(
-                        onTap: () async {
-                          try {
-                            await _toggleCompleted();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  isCompleted
-                                      ? 'Đã đánh dấu hoàn thành'
-                                      : 'Bỏ đánh dấu hoàn thành',
-                                ),
-                              ),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Lỗi: $e')),
-                            );
-                          }
-                        },
-                        child: Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.black, width: 2),
-                            color: isCompleted ? Color(MyColor.pr2) : Colors.transparent,
+                  icon: const Icon(Icons.delete),
+                  label: const Text("Xoá lịch trình này"),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text("Xác nhận xoá"),
+                        content: const Text("Bạn có chắc muốn xoá lịch trình này không?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("Huỷ"),
                           ),
-                          child: isCompleted
-                              ? const Icon(Icons.check, color: Color(MyColor.pr5), size: 16)
-                              : null,
-                        ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text("Xoá", style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    );
+                    if (confirm == true) {
+                      await _deleteSchedule();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Đã xoá lịch trình')),
+                        );
+                        Navigator.pop(context);
+                      }
+                    }
+                  },
                 ),
               ),
             ],
@@ -185,4 +249,3 @@ class _AdminEditTimelinePageState extends State<AdminEditTimelinePage> {
     );
   }
 }
-

@@ -50,7 +50,7 @@ class _ActListState extends State<ActList> {
         .get();
 
     return snap.docs
-        .map((doc) => Activity.fromFirestore(doc.data()!))
+        .map((doc) => Activity.fromFirestore(doc.data()!, id: doc.id))
         .toList();
   }
 

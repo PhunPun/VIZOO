@@ -11,11 +11,13 @@ import 'package:vizoo_frontend/models/trip_models_json.dart';
 class AdminTimelineBody extends StatefulWidget {
   final String tripId;
   final String locationId;
+  final VoidCallback onRefreshTripData; 
 
   const AdminTimelineBody({
     super.key,
     required this.tripId,
     required this.locationId,
+    required this.onRefreshTripData, 
   });
 
   @override
@@ -29,6 +31,7 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
   String? _selectedFilterDay;
   final List<int> dayOptions = [1, 2, 3, 4, 5, 6, 7];
   int? so_ngay;
+
   @override
   void initState() {
     super.initState();
@@ -36,14 +39,14 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
   }
 
   Future<void> fetchTripData() async {
+    print('[DEBUG] fetchTripData đang chạy');
     try {
-      final snapshot =
-          await FirebaseFirestore.instance
-              .collection('dia_diem')
-              .doc(widget.locationId)
-              .collection('trips')
-              .doc(widget.tripId)
-              .get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('dia_diem')
+          .doc(widget.locationId)
+          .collection('trips')
+          .doc(widget.tripId)
+          .get();
 
       if (snapshot.exists) {
         final data = snapshot.data()!;
@@ -65,15 +68,14 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
 
   Future<void> fetchDayNumbers() async {
     try {
-      final snap =
-          await FirebaseFirestore.instance
-              .collection('dia_diem')
-              .doc(widget.locationId)
-              .collection('trips')
-              .doc(widget.tripId)
-              .collection('timelines')
-              .orderBy('day_number')
-              .get();
+      final snap = await FirebaseFirestore.instance
+          .collection('dia_diem')
+          .doc(widget.locationId)
+          .collection('trips')
+          .doc(widget.tripId)
+          .collection('timelines')
+          .orderBy('day_number')
+          .get();
 
       final fetchedDays =
           snap.docs.map((d) => (d.data()['day_number'] as int)).toList();
@@ -108,6 +110,32 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
       initDate = newDate;
     });
   }
+  void onSetStay(String newStay) {
+  if (tripData != null) {
+    setState(() {
+      tripData = tripData!.copyWith(noiO: newStay);
+    });
+  }
+}
+
+void onSetActivityCount(int newCount) {
+  if (tripData != null) {
+    setState(() {
+      tripData = tripData!.copyWith(soAct: newCount);
+    });
+  }
+}
+
+void onSetMealCount(int newCount) {
+  if (tripData != null) {
+    setState(() {
+      tripData = tripData!.copyWith(soEat: newCount);
+    });
+  }
+}
+  Future<void> refreshTripData() async {
+    await fetchTripData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,13 +162,12 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
                 ),
               ),
               value: _selectedFilterDay ?? so_ngay?.toString(),
-              items:
-                  dayOptions.map((day) {
-                    return DropdownMenuItem<String>(
-                      value: day.toString(),
-                      child: Text(dayFormat(day)),
-                    );
-                  }).toList(),
+              items: dayOptions.map((day) {
+                return DropdownMenuItem<String>(
+                  value: day.toString(),
+                  child: Text(dayFormat(day)),
+                );
+              }).toList(),
               onChanged: (value) async {
                 if (value != null) {
                   setState(() {
@@ -153,9 +180,7 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
                         .doc(widget.locationId)
                         .collection('trips')
                         .doc(widget.tripId)
-                        .update({
-                          'so_ngay': int.parse(value),
-                        });
+                        .update({'so_ngay': int.parse(value)});
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -163,10 +188,10 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
                       ),
                     );
 
-                    
                     setState(() {
                       so_ngay = int.parse(value);
-                      tripData = tripData!.copyWith(soNgay: int.parse(value));
+                      tripData =
+                          tripData!.copyWith(soNgay: int.parse(value));
                     });
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -193,7 +218,6 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
             tripId: widget.tripId,
           ),
           const SizedBox(height: 16),
-
           if (days.isEmpty)
             const Padding(
               padding: EdgeInsets.all(16.0),
@@ -201,7 +225,6 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
             )
           else
             ...days.map((day) {
-              // Tạo query để lấy đúng timeline docs của ngày này
               final query = FirebaseFirestore.instance
                   .collection('dia_diem')
                   .doc(widget.locationId)
@@ -209,75 +232,61 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
                   .doc(widget.tripId)
                   .collection('timelines')
                   .where('day_number', isEqualTo: day);
-              //.orderBy('hour');
 
               return AdminTimelineList(
                 numberDay: day,
                 timelineQuery: query,
                 locationId: widget.locationId,
                 tripId: widget.tripId,
+                onRefreshTripData: widget.onRefreshTripData, // ✅ SỬA: dùng callback từ cha
               );
             }).toList(),
           Container(
             padding: const EdgeInsets.only(bottom: 30),
             child: Center(
-              child:
-                  tripData == null
-                      ? const CircularProgressIndicator()
-                      : ElevatedButton(
-                        onPressed:
-                            tripData!.status == null
-                                ? null
-                                : () async {
-                                  try {
-                                    final newStatus = !tripData!.status!;
-                                    await FirebaseFirestore.instance
-                                        .collection('dia_diem')
-                                        .doc(widget.locationId)
-                                        .collection('trips')
-                                        .doc(widget.tripId)
-                                        .update({'status': newStatus});
+              child: ElevatedButton(
+                onPressed: () async {
+                  try {
+                    final newStatus = !tripData!.status!;
+                    await FirebaseFirestore.instance
+                        .collection('dia_diem')
+                        .doc(widget.locationId)
+                        .collection('trips')
+                        .doc(widget.tripId)
+                        .update({'status': newStatus});
 
-                                    setState(() {
-                                      tripData = tripData!.copyWith(
-                                        status: newStatus,
-                                      );
-                                    });
+                    setState(() {
+                      tripData = tripData!.copyWith(status: newStatus);
+                    });
 
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Đã cập nhật trạng thái thành công',
-                                        ),
-                                      ),
-                                    );
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Lỗi khi cập nhật: $e'),
-                                      ),
-                                    );
-                                  }
-                                },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(MyColor.pr4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          tripData!.status! ? 'Dừng hàng trình' : 'Áp dụng',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã cập nhật trạng thái thành công'),
                       ),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Lỗi khi cập nhật: $e')),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(MyColor.pr4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  tripData!.status! ? 'Dừng hành trình' : 'Áp dụng',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
