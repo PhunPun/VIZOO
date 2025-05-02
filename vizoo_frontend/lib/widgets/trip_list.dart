@@ -17,7 +17,7 @@ class TripList extends StatelessWidget {
         final data = doc.data() as Map<String, dynamic>;
         final tripId = doc.id;
 
-        // Trích locationId từ đường dẫn: dia_diem/{locationId}/trips/{tripId}
+        // Trích locationId từ dia_diem
         final locationId = doc.reference.parent.parent?.id ?? '';
 
         return Trip.fromJson(data, id: tripId, locationId: locationId);

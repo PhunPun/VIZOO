@@ -1,16 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 
-class SetTime extends StatefulWidget {
+class AdminSetTime extends StatefulWidget {
   final String diaDiemId;
   final String tripId;
   final String timelineId;
   final String scheduleId;
 
-  const SetTime({
+  const AdminSetTime({
     super.key,
     required this.diaDiemId,
     required this.tripId,
@@ -19,134 +18,84 @@ class SetTime extends StatefulWidget {
   });
 
   @override
-  State<SetTime> createState() => _SetTimeState();
+  State<AdminSetTime> createState() => _AdminSetTimeState();
 }
 
 
-class _SetTimeState extends State<SetTime> {
-  TimeOfDay _selectedTime = const TimeOfDay(hour: 21, minute: 0);
-
+class _AdminSetTimeState extends State<AdminSetTime> {
   @override
   void initState() {
     super.initState();
-    _initialize();
+    _loadInitialTimeFromFirestore();
   }
 
-  Future<void> _initialize() async {
-    await _ensureUserTripExists();
-    await _loadInitialTimeFromFirestore();
-  }
-
-  /// Nếu chưa có chuyến trong users
-  Future<void> _ensureUserTripExists() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    final uid = user.uid;
-    final userTripRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('selected_trips')
-        .doc(widget.tripId);
-
-    final userTripSnap = await userTripRef.get();
-    if (userTripSnap.exists) return;
-
-    // Lấy dữ liệu chuyến gốc
-    final origTripRef = FirebaseFirestore.instance
-        .collection('dia_diem')
-        .doc(widget.diaDiemId)
-        .collection('trips')
-        .doc(widget.tripId);
-    final origTripSnap = await origTripRef.get();
-    if (!origTripSnap.exists) return;
-
-    // Clone dữ liệu chuyến lên users
-    await userTripRef.set({
-      ...origTripSnap.data()!,
-      'location_id': widget.diaDiemId,
-    });
-    // Clone timelines và schedule
-    final timelinesSnap = await origTripRef.collection('timelines').get();
-    for (final tlDoc in timelinesSnap.docs) {
-      final userTlRef = userTripRef.collection('timelines').doc(tlDoc.id);
-      await userTlRef.set({
-        ...tlDoc.data(),
-        'location_id': widget.diaDiemId,
-      });
-
-      final scheduleSnap = await origTripRef
-          .collection('timelines')
-          .doc(tlDoc.id)
-          .collection('schedule')
-          .get();
-      for (final scDoc in scheduleSnap.docs) {
-        final userScRef = userTlRef.collection('schedule').doc(scDoc.id);
-        await userScRef.set({
-          ...scDoc.data(),
-          'location_id': widget.diaDiemId,
-        });
-      }
+  Future<void> _loadInitialTimeFromFirestore() async {
+    // Kiểm tra các ID có rỗng không
+    if (widget.diaDiemId.isEmpty ||
+        widget.tripId.isEmpty ||
+        widget.timelineId.isEmpty ||
+        widget.scheduleId.isEmpty) {
+      debugPrint('Không thể truy cập Firestore');
+      return;
     }
-  }
-    Future<void> _loadInitialTimeFromFirestore() async {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-      final uid = user.uid;
 
-      final scheduleRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('selected_trips')
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('dia_diem')
+          .doc(widget.diaDiemId)
+          .collection('trips')
           .doc(widget.tripId)
           .collection('timelines')
           .doc(widget.timelineId)
           .collection('schedule')
-          .doc(widget.scheduleId);
+          .doc(widget.scheduleId)
+          .get();
 
-      try {
-        final snap = await scheduleRef.get();
-        if (snap.exists && snap.data()!.containsKey('hour')) {
-          _applyHourString(snap.data()!['hour'] as String);
+      if (doc.exists && doc.data()!.containsKey('hour')) {
+        final hourStr = doc['hour'] as String;
+        final parts = hourStr.split(':');
+        if (parts.length == 2) {
+          final int hour = int.parse(parts[0]);
+          final int minute = int.parse(parts[1]);
+
+          setState(() {
+            _selectedTime = TimeOfDay(hour: hour, minute: minute);
+          });
         }
-      } catch (e) {
-        debugPrint('Lỗi load time user: \$e');
       }
+    } catch (e) {
+      debugPrint('Lỗi khi lấy dữ liệu giờ từ Firestore: $e');
     }
+  }
 
-    void _applyHourString(String hourStr) {
-      final parts = hourStr.split(':');
-      if (parts.length == 2) {
-        final hour = int.tryParse(parts[0]) ?? _selectedTime.hour;
-        final minute = int.tryParse(parts[1]) ?? _selectedTime.minute;
-        setState(() {
-          _selectedTime = TimeOfDay(hour: hour, minute: minute);
-        });
-      }
-    }
-    String _formatTime(TimeOfDay t) => t.hour.toString().padLeft(2, '0') + ':' + t.minute.toString().padLeft(2, '0');
+
+  TimeOfDay _selectedTime = const TimeOfDay(hour: 21, minute: 0);
+
+  String _formatTime(TimeOfDay time) {
+    final hours = time.hour.toString().padLeft(2, '0');
+    final minutes = time.minute.toString().padLeft(2, '0');
+    return '$hours:$minutes';
+  }
   Future<void> _updateTimeInFirestore(TimeOfDay selectedTime) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    final uid = user.uid;
-    final hourFormatted = selectedTime.hour.toString().padLeft(2, '0') + ':' + selectedTime.minute.toString().padLeft(2, '0');
+    final hourFormatted = selectedTime.hour.toString().padLeft(2, '0') + ":" +
+        selectedTime.minute.toString().padLeft(2, '0');
 
-    final scheduleRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('selected_trips')
+    final docRef = FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.diaDiemId)
+        .collection('trips')
         .doc(widget.tripId)
         .collection('timelines')
         .doc(widget.timelineId)
         .collection('schedule')
         .doc(widget.scheduleId);
 
-    await scheduleRef.set({
+    await docRef.update({
       'hour': hourFormatted,
-      'location_id': widget.diaDiemId,
-    }, SetOptions(merge: true));
+    });
   }
 
-    Future<void> _showTimePickerDialog(BuildContext context) async {
+  Future<void> _showTimePickerDialog(BuildContext context) async {
     final int initialHour = _selectedTime.hour;
     final int initialMinute = _selectedTime.minute;
     int tempHour = _selectedTime.hour;
@@ -295,10 +244,9 @@ class _SetTimeState extends State<SetTime> {
             ),
             TextButton(
               onPressed: () async {
-                final newTime = TimeOfDay(hour: tempHour, minute: tempMinute);
-                await _updateTimeInFirestore(newTime);
-                setState(() { _selectedTime = newTime; });
-                Navigator.of(context).pop(true);
+                await _updateTimeInFirestore(_selectedTime);
+                await _loadInitialTimeFromFirestore();
+                Navigator.of(context).pop();
               },
               child: const Text(
                 'OK',
@@ -353,7 +301,8 @@ class _SetTimeState extends State<SetTime> {
                       alignment: Alignment.centerRight,
                       child: InkWell(
                         onTap: () => _showTimePickerDialog(context), 
-                        child: Text(_formatTime(_selectedTime),
+                        child: Text(
+                          _formatTime(_selectedTime), 
                           style: const TextStyle(
                             color: Color(MyColor.pr4),
                             fontSize: 18,

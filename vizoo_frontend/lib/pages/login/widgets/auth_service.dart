@@ -8,30 +8,43 @@ class AuthService {
 
   Future<User?> signInWithGoogle() async {
     try {
-      await _googleSignIn.signOut();
+      await _googleSignIn
+          .signOut(); // Đăng xuất tài khoản Google trước để chọn lại
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
 
       final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
+          await googleUser.authentication;
 
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      UserCredential userCredential =
-      await _auth.signInWithCredential(credential);
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
       User? user = userCredential.user;
 
       if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'uid': user.uid,
-          'email': user.email,
-          'displayName': user.displayName,
-          'photoURL': user.photoURL,
-          'lastSignIn': DateTime.now(),
-        }, SetOptions(merge: true));
+        final docRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid);
+        final docSnapshot = await docRef.get();
+
+        if (!docSnapshot.exists) {
+          // Nếu chưa có user, mới thêm vào Firestore
+          await docRef.set({
+            'uid': user.uid,
+            'email': user.email,
+            'username': user.displayName ?? '',
+            'photoURL': user.photoURL ?? '',
+            'lastSignIn': DateTime.now(),
+            'role': "user",
+          });
+        } else {
+          print("Tài khoản đã tồn tại, không cập nhật dữ liệu.");
+        }
       }
 
       return user;
@@ -54,7 +67,11 @@ class AuthService {
     }
   }
 
-  Future<User?> registerWithEmail(String email, String password, String username) async {
+  Future<User?> registerWithEmail(
+    String email,
+    String password,
+    String username,
+  ) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -66,7 +83,9 @@ class AuthService {
           'uid': user.uid,
           'email': user.email,
           'username': username,
+          'photoURL': "",
           'createdAt': DateTime.now(),
+          'role': "user",
         });
       }
       return user;

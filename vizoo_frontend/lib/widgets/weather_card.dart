@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
@@ -27,11 +28,31 @@ Future<Map<String, List<Map<String, dynamic>>>> getWeatherForAllTripsInLocation(
       .get();
 
   final result = <String, List<Map<String, dynamic>>>{};
+  final uid = FirebaseAuth.instance.currentUser?.uid;
 
   for (final tripDoc in tripsSnap.docs) {
     final trip = tripDoc.data();
-    final ngayBatDau = (trip['ngay_bat_dau'] as Timestamp).toDate();
-    final soNgay = trip['so_ngay'] ?? 0;
+    DateTime ngayBatDau = (trip['ngay_bat_dau'] as Timestamp).toDate();
+    int soNgay = trip['so_ngay'] ?? 0;
+
+    // 2) Nếu user đã lưu trip này, override từ users/{uid}/selected_trips/{tripId}
+    if (uid != null) {
+      final userSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('selected_trips')
+          .doc(tripDoc.id)
+          .get();
+      if (userSnap.exists) {
+        final userData = userSnap.data() as Map<String, dynamic>;
+        if (userData.containsKey('ngay_bat_dau')) {
+          ngayBatDau = (userData['ngay_bat_dau'] as Timestamp).toDate();
+        }
+        if (userData.containsKey('so_ngay')) {
+          soNgay = userData['so_ngay'] as int;
+        }
+      }
+    }
 
     final weatherList = <Map<String, dynamic>>[];
 
@@ -45,7 +66,7 @@ Future<Map<String, List<Map<String, dynamic>>>> getWeatherForAllTripsInLocation(
           ? (temps.cast<double>().reduce((a, b) => a + b) / temps.length).round()
           : null;
 
-      final desc = descs.isNotEmpty ? _mostCommon(descs.cast<String>()) : null;
+      //final desc = descs.isNotEmpty ? _mostCommon(descs.cast<String>()) : null;
 
       weatherList.add({
         'date': key,
@@ -69,7 +90,7 @@ Map<String, Map<String, List>> _groupWeatherDataByDate(List<dynamic> list) {
 
     map.putIfAbsent(key, () => {
       'temps': <double>[],
-      'descs': <String>[],
+      //'descs': <String>[],
     });
 
     map[key]!['temps']!.add(temp);
@@ -78,13 +99,6 @@ Map<String, Map<String, List>> _groupWeatherDataByDate(List<dynamic> list) {
   return map;
 }
 
-String _mostCommon(List<String> items) {
-  final counts = <String, int>{};
-  for (final item in items) {
-    counts[item] = (counts[item] ?? 0) + 1;
-  }
-  return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
-}
 
 /// Widget hiển thị danh sách thời tiết của 1 trip
 class WeatherCard extends StatelessWidget {
@@ -128,7 +142,6 @@ class WeatherCard extends StatelessWidget {
       },
     );
   }
-  //(DateTime date, int avgTemp, String description)
   Widget _buildWeatherItem(DateTime date, int avgTemp) {
     IconData weatherIcon;
     if (avgTemp >= 28) {

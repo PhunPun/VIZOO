@@ -1,6 +1,5 @@
   import 'dart:async';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
+  import 'package:cloud_firestore/cloud_firestore.dart';
   import 'package:firebase_auth/firebase_auth.dart';
   import 'package:flutter/material.dart';
   import 'package:flutter_svg/flutter_svg.dart';
@@ -22,9 +21,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
     @override
     State<TripCard> createState() => _TripCardState();
   }
-
   class _TripCardState extends State<TripCard> {
     bool _loved = false;
+    int _activityCount = 0;
+    double _totalCost = 0;
+    int _mealCount = 0;
     int _loveCount = 0;
     StreamSubscription? _loveSubscription;
 
@@ -48,9 +49,47 @@ import 'package:cloud_firestore/cloud_firestore.dart';
       super.dispose();
     }
 
+    late DocumentReference<Map<String, dynamic>> _masterTripRef;
+    DocumentReference<Map<String, dynamic>>? _userTripRef;
+    bool _useUserData = false;
     @override
     void initState() {
       super.initState();
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      _masterTripRef = FirebaseFirestore.instance
+          .collection('dia_diem')
+          .doc(widget.trip.locationId)
+          .collection('trips')
+          .doc(widget.trip.id);
+
+      if (uid != null) {
+        _userTripRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('selected_trips')
+            .doc(widget.trip.id);
+        // kiểm tra xem đã clone chưa
+        _initData();
+        _checkIfLoved();
+      }
+    }
+    Future<void> _initData() async {
+      if (_userTripRef != null) {
+        final snap = await _userTripRef!.get();
+        if (snap.exists) {
+          setState(() => _useUserData = true);
+        }
+      }
+      await Future.wait([
+        _loadActivityCount(),
+        _loadMealCount(),
+        _loadTotalCost(),
+      ]);
+    }
+
+    DocumentReference<Map<String, dynamic>> get _baseTripRef =>
+        (_useUserData && _userTripRef != null) ? _userTripRef! : _masterTripRef;
+
       _checkIfLoved();
       _listenToLoveCount();
     }
@@ -60,6 +99,40 @@ import 'package:cloud_firestore/cloud_firestore.dart';
       return DateFormat("dd/MM/yyyy").format(date);
     }
 
+    // Đếm số hoạt động
+    Future<void> _loadActivityCount() async {
+      int count = 0;
+      final timelines = await _baseTripRef.collection('timelines').get();
+      for (var tl in timelines.docs) {
+        final sch = await tl.reference.collection('schedule').get();
+        count += sch.docs.length;
+      }
+      if (mounted) setState(() => _activityCount = count);
+    }
+
+
+    // Tính tổng chi phí
+    Future<void> _loadTotalCost() async {
+      double sum = 0;
+      final timelines = await _baseTripRef.collection('timelines').get();
+      for (var tl in timelines.docs) {
+        final sch = await tl.reference.collection('schedule').get();
+        for (var doc in sch.docs) {
+          final actId = doc.data()['act_id'] as String?;
+          if (actId == null) continue;
+          final actDoc = await FirebaseFirestore.instance
+              .collection('dia_diem')
+              .doc(widget.trip.locationId)
+              .collection('activities')
+              .doc(actId)
+              .get();
+          if (actDoc.exists) {
+            sum += (actDoc.data()?['price'] ?? 0).toDouble();
+          }
+        }
+      }
+      if (mounted) setState(() => _totalCost = sum);
+    }
     Future<void> _handleLovePressed() async {
     final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
@@ -92,6 +165,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
         }
       }
     }
+    Future<void> _loadMealCount() async {
+      int count = 0;
+      final timelines = await _baseTripRef.collection('timelines').get();
+      for (var tl in timelines.docs) {
+        final sch = await tl.reference.collection('schedule').get();
+        for (var doc in sch.docs) {
+          final actId = doc.data()['act_id'] as String?;
+          if (actId == null) continue;
+          final actDoc = await FirebaseFirestore.instance
+              .collection('dia_diem')
+              .doc(widget.trip.locationId)
+              .collection('activities')
+              .doc(actId)
+              .get();
+          if (actDoc.exists && actDoc.data()?['categories'] == 'eat') {
+            count += 1;
+          }
+        }
+      }
+      if (mounted) setState(() => _mealCount = count);
+    }
 
     Future<void> _checkIfLoved() async {
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -113,8 +207,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
     @override
     Widget build(BuildContext context) {
       return GestureDetector(
-            onTap: () {
-          print('✅ TAP OK: ${widget.trip.name}');
+        onTap: () async {
           widget.onTap?.call();
         },
         child: SizedBox(
@@ -203,7 +296,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
                               ),
                             ),
                             Text(
-                              widget.trip.soAct.toString(),
+                              '$_activityCount',
                               style: TextStyle(
                                   color: Color(MyColor.pr5),
                                   fontSize: 16,
@@ -222,7 +315,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
                               ),
                             ),
                             Text(
-                              '${widget.trip.soEat}',
+                              '$_mealCount',
                               style: TextStyle(
                                 color: Color(MyColor.pr5),
                                 fontSize: 16,
@@ -287,6 +380,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
                         Row(
                           children: [
                             Text(
+                              "Số ngày: ",
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              '${widget.trip.soNgay}',
+                              style: TextStyle(
+                                  color: Color(MyColor.pr5),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500
+                              ),
+                            )
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Text(
                               "Chi phí: ",
                               style: const TextStyle(
                                 color: Colors.black,
@@ -294,7 +406,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
                               ),
                             ),
                             Text(
-                              "${NumberFormat("#,###", "vi_VN").format(widget.trip.chiPhi)}đ",
+                                "${NumberFormat('#,###','vi_VN').format(widget.trip.soNguoi * _totalCost)}đ",
                               style: TextStyle(
                                 color: Color(MyColor.pr5),
                                 fontSize: 16,

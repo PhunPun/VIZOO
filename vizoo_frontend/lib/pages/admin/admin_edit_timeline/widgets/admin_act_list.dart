@@ -1,44 +1,49 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:vizoo_frontend/models/activities.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
-import '../../../models/activities.dart';
 
-class ActList extends StatefulWidget {
+class AdminActList extends StatefulWidget {
   final String diaDiemId;
-  final String categories;
-  final String scheduleId;
   final String tripId;
   final String timelineId;
-  const ActList({
+  final String scheduleId;
+  final String categories;
+  final String selectedActId;
+  final VoidCallback onRefreshTripData; // ✅ thêm callback
+  final void Function(Map<String, dynamic>) onSetResult;
+
+  const AdminActList({
     super.key,
     required this.diaDiemId,
-    required this.categories,
-    required this.scheduleId,
     required this.tripId,
-    required this.timelineId
+    required this.timelineId,
+    required this.scheduleId,
+    required this.categories,
+    required this.selectedActId,
+    required this.onRefreshTripData,
+    required this.onSetResult, // 👈 thêm dòng này
   });
 
   @override
-  State<ActList> createState() => _ActListState();
+  State<AdminActList> createState() => _AdminActListState();
 }
 
-class _ActListState extends State<ActList> {
-
-  String? selectedActName;
+class _AdminActListState extends State<AdminActList> {
   late Future<List<Activity>> _activityFuture;
+  late String selectedActId;
 
   @override
   void initState() {
     super.initState();
+    selectedActId = widget.selectedActId;
     _activityFuture = fetchActivities();
   }
 
   @override
-  void didUpdateWidget(covariant ActList oldWidget) {
+  void didUpdateWidget(covariant AdminActList oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.categories != oldWidget.categories) {
       setState(() {
@@ -47,75 +52,78 @@ class _ActListState extends State<ActList> {
     }
   }
 
-  Future<void> _confirmAndReplace(Activity act) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bạn cần đăng nhập để thay đổi lịch")),
-      );
-      return;
-    }
-
-    final shouldReplace = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text("Xác nhận"),
-        content: Text("Bạn có muốn thay thế hoạt động hiện tại bằng “${act.name}”?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text("Hủy"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldReplace == true) {
-      final scheduleRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('selected_trips')
-          .doc(widget.tripId)
-          .collection('timelines')
-          .doc(widget.timelineId)
-          .collection('schedule')
-          .doc(widget.scheduleId);
-
-      await scheduleRef.update({
-        'act_id': act.id,
-        'updated_at': FieldValue.serverTimestamp(),
-      });
-
-      await scheduleRef.update({
-        'act_id': act.id,
-        'updated_at': FieldValue.serverTimestamp(),
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Đã thay thế bằng hoạt động “${act.name}”")),
-      );
-
-      setState(() {
-        selectedActName = act.name;
-      });
-    }
-  }
-
   Future<List<Activity>> fetchActivities() async {
+    final category = widget.categories.isEmpty ? 'eat' : widget.categories;
+
     final snap = await FirebaseFirestore.instance
         .collection('dia_diem')
         .doc(widget.diaDiemId)
         .collection('activities')
-        .where('categories', isEqualTo: widget.categories)
+        .where('categories', isEqualTo: category)
         .get();
 
     return snap.docs
-        .map((doc) => Activity.fromFirestore(doc))
+        .map((doc) => Activity.fromFirestore(doc.data(), id: doc.id))
         .toList();
+  }
+
+  Future<void> updateTripSummary({
+    required String diaDiemId,
+    required String tripId,
+  }) async {
+    int soAct = 0;
+    int soEat = 0;
+    int tongChiPhi = 0;
+    String? noiO;
+
+    final timelinesSnap = await FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(diaDiemId)
+        .collection('trips')
+        .doc(tripId)
+        .collection('timelines')
+        .get();
+
+    for (final timeline in timelinesSnap.docs) {
+      final scheduleSnap = await timeline.reference.collection('schedule').get();
+
+      for (final schedule in scheduleSnap.docs) {
+        final actId = schedule['act_id'];
+        if (actId == null || actId.toString().isEmpty) continue;
+
+        soAct++;
+
+        final actSnap = await FirebaseFirestore.instance
+            .collection('dia_diem')
+            .doc(diaDiemId)
+            .collection('activities')
+            .doc(actId)
+            .get();
+
+        final actData = actSnap.data();
+        if (actData == null) continue;
+
+        final categories = actData['categories'] ?? '';
+        final price = (actData['price'] as num?)?.toInt() ?? 0;
+        final name = actData['name'] ?? '';
+
+        if (categories == 'eat') soEat++;
+        if (categories == 'hotel') noiO = name;
+        tongChiPhi += price;
+      }
+    }
+
+    await FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(diaDiemId)
+        .collection('trips')
+        .doc(tripId)
+        .update({
+      'so_act': soAct,
+      'so_eat': soEat,
+      'chi_phi': tongChiPhi,
+      'noi_o': noiO ?? 'chưa chọn',
+    });
   }
 
   @override
@@ -153,9 +161,40 @@ class _ActListState extends State<ActList> {
   }
 
   Widget _actCard(Activity act) {
-    final isSelected = selectedActName == act.name;
+    final isSelected = act.id == selectedActId;
+
     return InkWell(
-      onTap: () => _confirmAndReplace(act),
+      onTap: () async {
+        setState(() => selectedActId = act.id);
+
+        final scheduleRef = FirebaseFirestore.instance
+            .collection('dia_diem')
+            .doc(widget.diaDiemId)
+            .collection('trips')
+            .doc(widget.tripId)
+            .collection('timelines')
+            .doc(widget.timelineId)
+            .collection('schedule')
+            .doc(widget.scheduleId);
+
+        await scheduleRef.update({'act_id': act.id});
+
+        await updateTripSummary(
+          diaDiemId: widget.diaDiemId,
+          tripId: widget.tripId,
+        );
+
+        widget.onRefreshTripData();
+
+        // ✅ Gửi kết quả ngược về cha, nhưng không pop
+        widget.onSetResult({
+          'chiPhi': act.price ?? 0,
+          'soAct': 1,
+          'soEat': act.categories == 'eat' ? 1 : 0,
+          'noiO': act.categories == 'hotel' ? act.name : null,
+        });
+      },
+
       child: Container(
         margin: const EdgeInsets.only(top: 8),
         padding: const EdgeInsets.only(left: 8),
@@ -165,7 +204,6 @@ class _ActListState extends State<ActList> {
             left: BorderSide(width: 4, color: Color(MyColor.pr3)),
             bottom: BorderSide(width: 0.2, color: Color(MyColor.pr3)),
           ),
-
         ),
         child: Row(
           children: [
@@ -175,7 +213,6 @@ class _ActListState extends State<ActList> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-
                     act.name,
                     style: const TextStyle(
                       color: Color(MyColor.black),
@@ -191,7 +228,6 @@ class _ActListState extends State<ActList> {
                       fontWeight: FontWeight.w400,
                     ),
                   ),
-
                 ],
               ),
             ),
@@ -200,7 +236,6 @@ class _ActListState extends State<ActList> {
               child: Align(
                 alignment: Alignment.center,
                 child: Text(
-
                   "${NumberFormat('#,###', 'vi_VN').format(act.price)}đ",
                   style: const TextStyle(
                     fontSize: 14,
@@ -215,10 +250,10 @@ class _ActListState extends State<ActList> {
                 alignment: Alignment.centerRight,
                 child: isSelected
                     ? SvgPicture.asset(
-                  'assets/icons/done.svg',
-                  width: 13.33,
-                  height: 13.33,
-                )
+                        'assets/icons/done.svg',
+                        width: 13.33,
+                        height: 13.33,
+                      )
                     : const SizedBox.shrink(),
               ),
             ),
@@ -228,4 +263,3 @@ class _ActListState extends State<ActList> {
     );
   }
 }
-

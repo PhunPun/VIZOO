@@ -1,15 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/models/trip_models_json.dart';
-import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
-import 'package:vizoo_frontend/widgets/trip_card.dart';
+import 'package:vizoo_frontend/pages/admin/admin_timeline/admin_timeline_page.dart';
+import 'package:vizoo_frontend/pages/admin/widgets/admin_trip_card.dart';
 
-class FillterTripList extends StatelessWidget {
+class AdminFillterTripList extends StatelessWidget {
   final Map<String, dynamic> filters;
-  const FillterTripList({super.key, this.filters = const {}});
-  
-  get trip => null;
+  final VoidCallback onReload;
 
+const AdminFillterTripList({
+  super.key,
+  required this.filters,
+  required this.onReload,
+});
+
+  get trip => null;
   Future<List<Trip>> _fetchTrips() async {
     try {
       List<Trip> trips = [];
@@ -80,7 +85,6 @@ class FillterTripList extends StatelessWidget {
 
     return true;
   }
-
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Trip>>(
@@ -105,19 +109,20 @@ class FillterTripList extends StatelessWidget {
           itemCount: trips.length,
           itemBuilder: (context, index) {
             final trip = trips[index]; // 🛠️ Lấy phần tử đúng
-            return TripCard(
+            return AdminTripCard(
               trip: trip,
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TimelinePage(
+                    builder: (context) => AdminTimelinePage(
                       tripId: trip.id,
                       locationId: trip.locationId,
                     ),
                   ),
                 );
               },
+              onDeleted: onReload,
             );
           },
         );
