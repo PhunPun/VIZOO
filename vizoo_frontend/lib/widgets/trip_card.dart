@@ -1,13 +1,14 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:vizoo_frontend/calculator/day_format.dart';
-import 'package:vizoo_frontend/themes/colors/colors.dart';
-import 'package:intl/intl.dart';
-import '../models/trip_models_json.dart';
+  import 'dart:async';
+  import 'package:cloud_firestore/cloud_firestore.dart';
+  import 'package:firebase_auth/firebase_auth.dart';
+  import 'package:flutter/material.dart';
+  import 'package:flutter_svg/flutter_svg.dart';
+  import 'package:vizoo_frontend/calculator/day_format.dart';
+  import 'package:vizoo_frontend/themes/colors/colors.dart';
+  import 'package:intl/intl.dart';
+  import '../models/trip_models_json.dart';
 
-class TripCard extends StatefulWidget {
+  class TripCard extends StatefulWidget {
     final Trip trip;
     final VoidCallback? onTap;
 
@@ -25,6 +26,28 @@ class TripCard extends StatefulWidget {
     int _activityCount = 0;
     double _totalCost = 0;
     int _mealCount = 0;
+    int _loveCount = 0;
+    StreamSubscription? _loveSubscription;
+
+    void _listenToLoveCount() {
+      _loveSubscription = FirebaseFirestore.instance
+          .collection('love')
+          .where('trip_id', isEqualTo: widget.trip.id)
+          .snapshots()
+          .listen((snapshot) {
+        if (mounted) {
+          setState(() {
+            _loveCount = snapshot.docs.length;
+          });
+        }
+      });
+    }
+
+    @override
+    void dispose() {
+      _loveSubscription?.cancel();
+      super.dispose();
+    }
 
     late DocumentReference<Map<String, dynamic>> _masterTripRef;
     DocumentReference<Map<String, dynamic>>? _userTripRef;
@@ -67,6 +90,11 @@ class TripCard extends StatefulWidget {
     DocumentReference<Map<String, dynamic>> get _baseTripRef =>
         (_useUserData && _userTripRef != null) ? _userTripRef! : _masterTripRef;
 
+      _checkIfLoved();
+      _listenToLoveCount();
+    }
+
+    // Hàm định dạng ngày tháng
     String getFormattedDate(DateTime date) {
       return DateFormat("dd/MM/yyyy").format(date);
     }
@@ -387,6 +415,21 @@ class TripCard extends StatefulWidget {
                             )
                           ],
                         ),
+                        Row(
+                          children: [
+                            Icon(Icons.favorite, color: Colors.red, size: 20),
+                            SizedBox(width: 4),
+                            Text(
+                              '$_loveCount lượt yêu thích',
+                              style: TextStyle(
+                                color: Color(MyColor.pr5),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+
                       ],
                     )
                   ],

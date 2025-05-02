@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:vizoo_frontend/pages/search/search_page.dart';
-import 'package:vizoo_frontend/themes/colors/colors.dart';
-import 'package:vizoo_frontend/pages/home/widgets/home_body.dart';
+import 'package:vizoo_frontend/pages/admin/widgets/add_trip_page.dart';
+import 'package:vizoo_frontend/pages/admin/widgets/admin_trip_body.dart';
 import 'package:vizoo_frontend/pages/home/widgets/home_header.dart';
 import 'package:vizoo_frontend/pages/home/widgets/home_hot_locations.dart';
+import 'package:vizoo_frontend/pages/search/search_page.dart';
+import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/widgets/filter_drawer.dart';
 
-class Homeconten extends StatefulWidget {
-  const Homeconten({super.key});
+class AdminTripPage extends StatefulWidget {
+  const AdminTripPage({super.key});
 
   @override
-  State<Homeconten> createState() => _HomecontenState();
+  State<AdminTripPage> createState() => _AdminTripPageState();
 }
 
-class _HomecontenState extends State<Homeconten> {
+class _AdminTripPageState extends State<AdminTripPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Map<String, dynamic> _filters = {};
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,8 +50,31 @@ class _HomecontenState extends State<Homeconten> {
               });
             },
           ),
-          HomeBody(filters: _filters),
+          AdminTripBody(
+            filters: _filters,
+            onReload: () {
+              setState(() {}); // ✅ reload lại khi xóa
+            },
+          ),
         ],
+      ),
+
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Color(MyColor.pr3),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddTripPage()),
+          );
+          if (result == true) {
+            setState(() {}); // cập nhật lại danh sách sau khi thêm
+          }
+        },
+        label: const Text(
+          "Thêm hoạt động",
+          style: TextStyle(color: Color(MyColor.pr5)),
+        ),
+        icon: const Icon(Icons.add, color: Color(MyColor.pr5)),
       ),
     );
   }

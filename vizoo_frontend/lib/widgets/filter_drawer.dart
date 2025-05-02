@@ -81,11 +81,14 @@ class _FilterDrawerState extends State<FilterDrawer> {
   }
 
   Future<void> fetchDiaDiems() async {
-    final snapshot = await FirebaseFirestore.instance.collection('dia_diem').get();
-    setState(() {
-      diaDiemDocs = snapshot.docs;
-    });
-  }
+  final snapshot = await FirebaseFirestore.instance.collection('dia_diem').get();
+  if (!mounted) return; // ✅ Kiểm tra widget còn tồn tại không
+
+  setState(() {
+    diaDiemDocs = snapshot.docs;
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {

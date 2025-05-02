@@ -67,26 +67,36 @@ class _SetDayStartState extends State<SetDayStart> {
       initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(
-            primary: Color(MyColor.pr4),
-            onPrimary: Colors.white,
-            surface: Colors.white,
-            onSurface: Colors.black,
-          ),
-          dialogTheme: DialogTheme(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+      builder:
+          (ctx, child) => Theme(
+            data: Theme.of(ctx).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: Color(MyColor.pr4),
+                onPrimary: Colors.white,
+                surface: Colors.white,
+                onSurface: Colors.black,
+              ),
+              dialogTheme: DialogTheme(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
+            child: child!,
           ),
-        ),
-        child: child!,
-      ),
     );
 
     if (picked != null && picked != _selectedDate) {
+      DateTime now = DateTime.now();
+      DateTime today = DateTime(now.year, now.month, now.day);
+      if (picked.isBefore(today)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không thể chọn ngày trong quá khứ!')),
+        );
+        return;
+      }
+
       setState(() {
         _selectedDate = picked;
       });
@@ -148,6 +158,7 @@ class _SetDayStartState extends State<SetDayStart> {
       debugPrint('Lỗi khi lưu hoặc cập nhật trip: \$e');
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Container(

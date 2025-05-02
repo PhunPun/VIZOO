@@ -1,36 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:vizoo_frontend/widgets/locations_card.dart';
-
 import '../models/locations_models.dart';
 
-// class LocationList extends StatelessWidget {
-//   LocationList({super.key});
-//
-//   final List<LocationsModel> locations = LocationsModel.getLocations();
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return SizedBox(
-//       height: 137,
-//       child: ListView.builder(
-//         padding: EdgeInsets.only(right: 8),
-//         scrollDirection: Axis.horizontal,
-//         itemCount: locations.length,
-//         itemBuilder: (context, index){
-//           return LocationsCard(
-//             ten: locations[index].name,
-//             hinhAnh1: locations[index].imageUrl,
-//           );
-//         },
-//       ),
-//     );
-//   }
-// }
+class LocationList extends StatefulWidget {
+  final void Function(String idDiaDiem) onLocationSelected;
 
-class LocationList extends StatelessWidget {
-  const LocationList({super.key});
+  const LocationList({super.key, required this.onLocationSelected});
 
+  @override
+  State<LocationList> createState() => _LocationListState();
+}
+
+class _LocationListState extends State<LocationList> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -55,8 +37,13 @@ class LocationList extends StatelessWidget {
             itemCount: diaDiemList.length,
             itemBuilder: (context, index) {
               final diaDiem = diaDiemList[index];
-              return LocationsCard(ten: diaDiem.ten,
-                     hinhAnh1: diaDiem.hinhAnh1,);
+              return LocationsCard(
+                ten: diaDiem.ten,
+                hinhAnh1: diaDiem.hinhAnh1,
+                onTap: () {
+                  widget.onLocationSelected(diaDiem.id);
+                },
+              );
             },
           );
         },
@@ -64,4 +51,3 @@ class LocationList extends StatelessWidget {
     );
   }
 }
-

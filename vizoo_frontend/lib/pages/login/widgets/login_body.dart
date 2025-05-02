@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -106,20 +107,44 @@ class _LoginBodyState extends State<LoginBody> {
               String email = _emailController.text.trim();
               String password = _passwordController.text.trim();
               User? user = await _authService.signInWithEmail(email, password);
+
               if (user != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Đăng nhập thành công")),
-                );
-                context.goNamed(RouterName.home);
+                final uid = user.uid;
+                final snapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+                final data = snapshot.data();
+
+                if (data != null && data.containsKey('role')) {
+                  final role = data['role'];
+
+                  if (role == 'admin') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Đăng nhập thành công")),
+                    );
+                    context.goNamed(RouterName.admin); // Chuyển tới trang Admin
+                  } else if (role == 'user') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Đăng nhập thành công")),
+                    );
+                    context.goNamed(RouterName.home); // Chuyển tới trang Home
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Role không hợp lệ")),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Không tìm thấy thông tin người dùng")),
+                  );
+                }
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Đăng nhập thất bại")),
+                  const SnackBar(content: Text("Đăng nhập thất bại")),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(MyColor.pr4),
-              minimumSize: Size(135, 37),
+              minimumSize: const Size(135, 37),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(25),
               ),
@@ -134,6 +159,7 @@ class _LoginBodyState extends State<LoginBody> {
               ),
             ),
           ),
+
           const SizedBox(height: 25),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -145,13 +171,43 @@ class _LoginBodyState extends State<LoginBody> {
                   try {
                     User? user = await _authService.signInWithGoogle();
                     if (user != null) {
-                      print('Đăng nhập thanh cong');
-                      context.goNamed(RouterName.home);
+                      final uid = user.uid;
+                      final snapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+                      final data = snapshot.data();
+
+                      if (data != null && data.containsKey('role')) {
+                        final role = data['role'];
+
+                        if (role == 'admin') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Đăng nhập thành công")),
+                          );
+                          context.goNamed(RouterName.admin);
+                        } else if (role == 'user') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Đăng nhập thành công")),
+                          );
+                          context.goNamed(RouterName.home);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Role không hợp lệ")),
+                          );
+                        }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Không tìm thấy thông tin người dùng")),
+                        );
+                      }
                     } else {
-                      print('Đăng nhập thất bại: User null');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Đăng nhập thất bại")),
+                      );
                     }
                   } catch (e) {
                     print('Lỗi khi đăng nhập Google: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Lỗi: ${e.toString()}")),
+                    );
                   }
                 },
                 child: SvgPicture.asset('assets/icons/Gmail.svg'),
