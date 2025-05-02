@@ -1,5 +1,6 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
@@ -9,11 +10,16 @@ import '../../../models/activities.dart';
 class ActList extends StatefulWidget {
   final String diaDiemId;
   final String categories;
-
+  final String scheduleId;
+  final String tripId;
+  final String timelineId;
   const ActList({
     super.key,
     required this.diaDiemId,
     required this.categories,
+    required this.scheduleId,
+    required this.tripId,
+    required this.timelineId
   });
 
   @override
@@ -41,6 +47,64 @@ class _ActListState extends State<ActList> {
     }
   }
 
+  Future<void> _confirmAndReplace(Activity act) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bạn cần đăng nhập để thay đổi lịch")),
+      );
+      return;
+    }
+
+    final shouldReplace = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("Xác nhận"),
+        content: Text("Bạn có muốn thay thế hoạt động hiện tại bằng “${act.name}”?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text("Hủy"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldReplace == true) {
+      final scheduleRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('selected_trips')
+          .doc(widget.tripId)
+          .collection('timelines')
+          .doc(widget.timelineId)
+          .collection('schedule')
+          .doc(widget.scheduleId);
+
+      await scheduleRef.update({
+        'act_id': act.id,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+
+      await scheduleRef.update({
+        'act_id': act.id,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Đã thay thế bằng hoạt động “${act.name}”")),
+      );
+
+      setState(() {
+        selectedActName = act.name;
+      });
+    }
+  }
+
   Future<List<Activity>> fetchActivities() async {
     final snap = await FirebaseFirestore.instance
         .collection('dia_diem')
@@ -50,7 +114,7 @@ class _ActListState extends State<ActList> {
         .get();
 
     return snap.docs
-        .map((doc) => Activity.fromFirestore(doc.data()!))
+        .map((doc) => Activity.fromFirestore(doc))
         .toList();
   }
 
@@ -91,7 +155,7 @@ class _ActListState extends State<ActList> {
   Widget _actCard(Activity act) {
     final isSelected = selectedActName == act.name;
     return InkWell(
-      onTap: () => setState(() => selectedActName = act.name),
+      onTap: () => _confirmAndReplace(act),
       child: Container(
         margin: const EdgeInsets.only(top: 8),
         padding: const EdgeInsets.only(left: 8),
@@ -141,7 +205,6 @@ class _ActListState extends State<ActList> {
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(MyColor.pr4),
-
                   ),
                 ),
               ),

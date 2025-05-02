@@ -1,18 +1,25 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Activity {
-  final String name; // Thay "ten" -> "name"
-  final String address; // Thay "diaChi" -> "address"
-  final int price; // Thay "gia" -> "price"
+  final String id;
+  final String name;
+  final String address;
+  final int price;
   final String categories;
 
   Activity({
+    required this.id,
     required this.name,
     required this.address,
     required this.price,
     required this.categories,
   });
 
-  factory Activity.fromFirestore(Map<String, dynamic> data) {
+  factory Activity.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+
     return Activity(
+      id: doc.id,
       name: data['name'] as String? ?? '',
       address: data['address'] as String? ?? '',
       price: (data['price'] as num?)?.toInt() ?? 0,

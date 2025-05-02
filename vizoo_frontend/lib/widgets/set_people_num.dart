@@ -1,7 +1,12 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../pages/timeline/timeline_page.dart';
 
 
 class SetPeopleNum extends StatefulWidget {
@@ -29,19 +34,59 @@ class SetPeopleNum extends StatefulWidget {
 class _SetPeopleNumState extends State<SetPeopleNum> {
   late int peopleNum;
   late int cost;
+  late DocumentReference userTripRef;
+  bool _userTripExists = false;
+  StreamSubscription<DocumentSnapshot>? _sub;
   @override
-  void initState(){
+  @override
+  void initState() {
     super.initState();
     peopleNum = widget.peopleNum;
     cost = widget.cost;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      userTripRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('selected_trips')
+          .doc(widget.tripId);
+      _initUserTrip();
+    }
   }
-  Future<void> _updateFirestorePeopleAndCost() async {
-    await FirebaseFirestore.instance
-        .collection('dia_diem')
-        .doc(widget.diaDiemId)
-        .collection('trips')
-        .doc(widget.tripId)
-        .update({
+  Future<void> _initUserTrip() async {
+    final snap = await userTripRef.get();
+    if (snap.exists) {
+      _userTripExists = true;
+      final data = snap.data() as Map<String, dynamic>;
+      setState(() {
+        peopleNum = data['so_nguoi'] as int? ?? peopleNum;
+        cost = data['chi_phi'] as int? ?? cost;
+      });
+      widget.onSetPeople(peopleNum);
+      widget.onSetCost(cost);
+    }
+    // lắng nghe thay đổi sau này
+    _sub = userTripRef.snapshots().listen((snap) {
+      if (snap.exists) {
+        final data = snap.data() as Map<String, dynamic>;
+        setState(() {
+          peopleNum = data['so_nguoi'] as int? ?? peopleNum;
+          cost = data['chi_phi'] as int? ?? cost;
+        });
+        widget.onSetPeople(peopleNum);
+        widget.onSetCost(cost);
+      }
+    });
+  }
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  /// cập nhật số người và chi phí lên bảng user
+  Future<void> _updateUserTripPeopleAndCost() async {
+    await userTripRef.update({
       'so_nguoi': peopleNum,
       'chi_phi': cost,
     });
@@ -52,23 +97,103 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
       cost = (widget.cost * peopleNum) ~/ widget.peopleNum;
       widget.onSetCost(cost);
     });
-    _updateFirestorePeopleAndCost();
+  }
+  Future<void> _syncToFirestore() async {
+    final updateData = {
+      'so_nguoi': peopleNum,
+      'chi_phi': cost,
+      'location_id': widget.diaDiemId,
+    };
+    if (_userTripExists) {
+      await userTripRef.update(updateData);
+    } else {
+      await _addFullTripToUser();
+    }
+  }
+
+  Future<void> _addFullTripToUser() async {
+    final masterRef = FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.diaDiemId)
+        .collection('trips')
+        .doc(widget.tripId);
+    final masterSnap = await masterRef.get();
+    if (!masterSnap.exists) return;
+
+    final masterData = masterSnap.data()!;
+    // Copy main trip doc with location_id
+    await userTripRef.set({
+      ...masterData,
+      'saved_at': FieldValue.serverTimestamp(),
+      'so_nguoi': peopleNum,
+      'chi_phi': cost,
+      'location_id': widget.diaDiemId,
+    }, SetOptions(merge: true));
+
+    // Copy timelines and include location_id
+    final tlSnap = await masterRef.collection('timelines').get();
+    for (var tl in tlSnap.docs) {
+      final tlData = tl.data();
+      await userTripRef
+          .collection('timelines')
+          .doc(tl.id)
+          .set({
+        ...tlData,
+        'location_id': widget.diaDiemId,
+      }, SetOptions(merge: true));
+
+      // Copy schedules and include location_id
+      final schSnap = await tl.reference.collection('schedule').get();
+      for (var sch in schSnap.docs) {
+        final schData = sch.data();
+        await userTripRef
+            .collection('timelines')
+            .doc(tl.id)
+            .collection('schedule')
+            .doc(sch.id)
+            .set({
+          ...schData,
+          'location_id': widget.diaDiemId,
+        }, SetOptions(merge: true));
+      }
+    }
+
+    setState(() {
+      _userTripExists = true;
+    });
+
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => TimelinePage(
+        tripId: widget.tripId,
+        locationId: widget.diaDiemId,
+      ),
+    ));
   }
   void _incremetPeople(){
     if(peopleNum < 50){
-      setState(() {
+      setState(() async {
         peopleNum++;
         _setCost();
         widget.onSetPeople(peopleNum);
+        if (_userTripExists) {
+          await _updateUserTripPeopleAndCost();
+        } else {
+          await _addFullTripToUser();
+        }
       });
     }
   }
   void _decrementPeople(){
     if(peopleNum > 1){
-      setState(() {
+      setState(() async {
         peopleNum--;
         _setCost();
         widget.onSetPeople(peopleNum);
+        if (_userTripExists) {
+          await _updateUserTripPeopleAndCost();
+        } else {
+          await _addFullTripToUser();
+        }
       });
     }
   }

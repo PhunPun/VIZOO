@@ -2,8 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 
 class Trip {
-  final String id;         // tripId
-  final String locationId; // locationId
+  final String id;
+  final String userId;
+  final String locationId;
   final String name;
   final String anh;
   final int chiPhi;
@@ -19,6 +20,7 @@ class Trip {
 
   Trip({
     required this.id,
+    required this.userId,
     required this.locationId,
     required this.name,
     required this.anh,
@@ -53,11 +55,49 @@ class Trip {
         soEat: json['so_eat'] as int,
         soNgay: json['so_ngay'] as int,
         soNguoi: json['so_nguoi'] as int,
-        status: json['status'] is bool,
+        status: json['status'] is bool, userId: '',
     );
   }
 
   Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'anh': anh,
+      'chi_phi': chiPhi,
+      'danh_gia': danhGia,
+      'love': love,
+      'ngay_bat_dau': Timestamp.fromDate(ngayBatDau),
+      'noi_o': noiO,
+      'so_act': soAct,
+      'so_eat': soEat,
+      'so_ngay': soNgay,
+      'so_nguoi': soNguoi,
+      'status': status,
+    };
+  }
+  factory Trip.fromJson1(Map<String, dynamic> json, {
+    required String id,
+    required String userId,
+  }) {
+    return Trip(
+      id: id,
+      userId: userId,
+      name: json['name'] as String,
+      anh: json['anh'] as String,
+      chiPhi: json['chi_phi'] as int,
+      danhGia: json['danh_gia'] as int,
+      love: json['love'] as bool,
+      ngayBatDau: (json['ngay_bat_dau'] as Timestamp).toDate(),
+      noiO: json['noi_o'] as String,
+      soAct: json['so_act'] as int,
+      soEat: json['so_eat'] as int,
+      soNgay: json['so_ngay'] as int,
+      soNguoi: json['so_nguoi'] as int,
+      status: (json['status'] ?? false) as bool, locationId: '',
+    );
+  }
+
+  Map<String, dynamic> toJson1() {
     return {
       'name': name,
       'anh': anh,
@@ -103,7 +143,7 @@ class Trip {
       soEat: soEat ?? this.soEat,
       soNgay: soNgay ?? this.soNgay,
       soNguoi: soNguoi ?? this.soNguoi,
-      status: status ?? this.status,
+      status: status ?? this.status, userId: '',
     );
   }
 }
