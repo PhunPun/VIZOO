@@ -1,6 +1,6 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
@@ -54,19 +54,91 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
     setState(() => actCategories = newCategories);
   }
 
-  Future<void> _toggleCompleted() async {
-    final newStatus = !isCompleted;
-    final docRef = FirebaseFirestore.instance
+  /// Đảm bảo chuyến đã được clone vào users/{uid}/selected_trips
+  Future<void> _ensureUserTripExists() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+    final userTripRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('selected_trips')
+        .doc(widget.tripId);
+
+    final userTripSnap = await userTripRef.get();
+    if (userTripSnap.exists) return;
+
+    // Clone data chuyến gốc
+    final origTripRef = FirebaseFirestore.instance
         .collection('dia_diem')
         .doc(widget.diaDiemId)
         .collection('trips')
+        .doc(widget.tripId);
+    final origTripSnap = await origTripRef.get();
+    if (!origTripSnap.exists) return;
+
+    await userTripRef.set(origTripSnap.data()!);
+
+    // Clone timelines và schedule
+    final timelinesSnap = await origTripRef.collection('timelines').get();
+    for (final tlDoc in timelinesSnap.docs) {
+      final userTlRef = userTripRef.collection('timelines').doc(tlDoc.id);
+      await userTlRef.set(tlDoc.data());
+      final scheduleSnap = await origTripRef
+          .collection('timelines')
+          .doc(tlDoc.id)
+          .collection('schedule')
+          .get();
+      for (final scDoc in scheduleSnap.docs) {
+        final userScRef = userTlRef.collection('schedule').doc(scDoc.id);
+        await userScRef.set(scDoc.data()!);
+      }
+    }
+  }
+  Future<bool> showDeleteConfirmationDialog(BuildContext context) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận xóa'),
+        content: const Text('Bạn có chắc chắn muốn xóa hoạt động này không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    ) ??
+        false;
+  }
+
+  Future<void> _toggleCompleted() async {
+    final newStatus = !isCompleted;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+
+    //  clone chuyến
+    await _ensureUserTripExists();
+    // Cập nhật status vào user
+    final scheduleRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('selected_trips')
         .doc(widget.tripId)
         .collection('timelines')
         .doc(widget.timelineId)
         .collection('schedule')
         .doc(widget.scheduleId);
 
-    await docRef.update({'status': newStatus});
+    await scheduleRef.update({'status': newStatus});
     setState(() => isCompleted = newStatus);
   }
   @override
@@ -85,7 +157,7 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
           systemOverlayStyle: SystemUiOverlayStyle.dark,
           leading: IconButton(
             icon: Icon(Platform.isIOS ? Icons.arrow_back_ios : Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(true),
           ),
           actions: [
             Container(
@@ -101,7 +173,7 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              // Widget chọn thời gian, đã lưu trữ trong Firestore
+              // Widget chọn thời gian
               SetTime(
                 diaDiemId: widget.diaDiemId,
                 tripId: widget.tripId,
@@ -119,6 +191,9 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
               ActList(
                 diaDiemId: widget.diaDiemId,
                 categories: actCategories,
+                tripId: widget.tripId,
+                timelineId: widget.timelineId,
+                scheduleId: widget.scheduleId,
               ),
 
               // Nút đánh dấu hoàn thành
@@ -177,6 +252,52 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                   ],
                 ),
               ),
+              // Nút xóa hoạt động
+              Container(
+                margin: const EdgeInsets.only(bottom: 40),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () async {
+                    final confirm = await showDeleteConfirmationDialog(context);
+                    if (!confirm) return;
+
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) return;
+                    final uid = user.uid;
+
+                    try {
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .collection('selected_trips')
+                          .doc(widget.tripId)
+                          .collection('timelines')
+                          .doc(widget.timelineId)
+                          .collection('schedule')
+                          .doc(widget.scheduleId)
+                          .delete();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Đã xóa hoạt động.')),
+                      );
+
+                      Navigator.of(context).pop(true);
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Lỗi khi xóa: $e')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.delete),
+                  label: const Text('Xóa hoạt động'),
+                ),
+              ),
+
             ],
           ),
         ),
