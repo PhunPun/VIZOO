@@ -56,58 +56,65 @@ class _AddTripPageState extends State<AddTripPage> {
   }
 
   Future<void> _saveTrip() async {
-    if (!_formKey.currentState!.validate() ||
-        _startDate == null ||
-        _selectedLocationId == null ||
-        _selectedSoNgay == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng điền đầy đủ thông tin')),
-      );
-      return;
-    }
-
-    const int soNguoi = 1;
-
-    final newTrip = {
-      'anh': _imageUrlController.text,
-      'chi_phi': 0,
-      'danh_gia': 0,
-      'love': false,
-      'name': _nameController.text,
-      'ngay_bat_dau': Timestamp.fromDate(_startDate!),
-      'noi_o': 'chưa chọn',
-      'so_act': 0,
-      'so_eat': 0,
-      'so_ngay': _selectedSoNgay,
-      'so_nguoi': soNguoi,
-      'status': false,
-    };
-
-    final docRef = FirebaseFirestore.instance
-        .collection("dia_diem")
-        .doc(_selectedLocationId)
-        .collection("trips")
-        .doc();
-
-    await docRef.set(newTrip);
-
-    final timelinesRef = docRef.collection("timelines");
-    for (int i = 1; i <= _selectedSoNgay!; i++) {
-      await timelinesRef.add({'day_number': i});
-    }
-
-    // 👉 Chuyển đến AdminTimelinePage sau khi tạo xong
+  if (!_formKey.currentState!.validate() ||
+      _startDate == null ||
+      _selectedLocationId == null ||
+      _selectedSoNgay == null) {
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AdminTimelinePage(
-          tripId: docRef.id,
-          locationId: _selectedLocationId!,
-        ),
-      ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Vui lòng điền đầy đủ thông tin')),
     );
+    return;
   }
+
+  print('✅ Bắt đầu lưu trip');
+
+  final newTrip = {
+    'anh': _imageUrlController.text,
+    'chi_phi': 0,
+    'danh_gia': 0,
+    'love': false,
+    'name': _nameController.text,
+    'ngay_bat_dau': Timestamp.fromDate(_startDate!),
+    'noi_o': 'chưa chọn',
+    'so_act': 0,
+    'so_eat': 0,
+    'so_ngay': _selectedSoNgay,
+    'so_nguoi': 1,
+    'status': false,
+  };
+
+  final docRef = FirebaseFirestore.instance
+      .collection("dia_diem")
+      .doc(_selectedLocationId)
+      .collection("trips")
+      .doc();
+
+  await docRef.set(newTrip);
+  print('✅ Đã lưu trip');
+
+  final timelinesRef = docRef.collection("timelines");
+
+  for (int i = 1; i <= _selectedSoNgay!; i++) {
+    await timelinesRef.add({'day_number': i});
+    print('✅ Đã tạo timeline ngày $i');
+  }
+
+  if (!mounted) return;
+
+  print('✅ Chuyển trang đến AdminTimelinePage');
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => AdminTimelinePage(
+        tripId: docRef.id,
+        locationId: _selectedLocationId!,
+      ),
+    ),
+  );
+  print('✅ Đã push xong'); // Sẽ không in vì pushReplacement chuyển trang luôn
+}
+
 
   InputDecoration _customInput(String label) {
     return InputDecoration(

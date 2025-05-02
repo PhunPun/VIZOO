@@ -16,7 +16,7 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-  String _selectedPage = 'user';
+  String _selectedPage = 'tour';
 
   String? _username;
   String? _photoURL;
@@ -89,6 +89,14 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ),
             ListTile(
+              leading: const Icon(Icons.event),
+              title: const Text('Quản lý tour'),
+              onTap: () {
+                setState(() => _selectedPage = 'tour');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.people),
               title: const Text('Quản lý người dùng'),
               onTap: () {
@@ -101,14 +109,6 @@ class _AdminPageState extends State<AdminPage> {
               title: const Text('Quản lý hoạt động'),
               onTap: () {
                 setState(() => _selectedPage = 'activity');
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.event),
-              title: const Text('Quản lý tour'),
-              onTap: () {
-                setState(() => _selectedPage = 'tour');
                 Navigator.pop(context);
               },
             ),

@@ -45,6 +45,8 @@ class AdminEditTimelinePage extends StatefulWidget {
 class _AdminEditTimelinePageState extends State<AdminEditTimelinePage> {
   late String actCategories;
   late bool isCompleted;
+  Map<String, dynamic>? resultData;
+
 
   @override
   void initState() {
@@ -163,7 +165,9 @@ class _AdminEditTimelinePageState extends State<AdminEditTimelinePage> {
           systemOverlayStyle: SystemUiOverlayStyle.dark,
           leading: IconButton(
             icon: Icon(Platform.isIOS ? Icons.arrow_back_ios : Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              Navigator.pop(context, resultData); // ✅ Chỉ pop khi nhấn nút back
+            },
           ),
           actions: [
             Container(
@@ -197,6 +201,16 @@ class _AdminEditTimelinePageState extends State<AdminEditTimelinePage> {
                 categories: actCategories,
                 selectedActId: widget.actId,
                 onRefreshTripData: widget.onRefreshTripData,
+                onSetResult: (data) {
+                  if (mounted) {
+                    setState(() {
+                      resultData = data;
+                    });
+                  } else {
+                    resultData = data;
+                  }
+                },
+
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),

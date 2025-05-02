@@ -62,12 +62,13 @@ class _AdminTimelineListState extends State<AdminTimelineList> {
           continue;
         }
 
-        final actSnap = await FirebaseFirestore.instance
-            .collection('dia_diem')
-            .doc(widget.locationId)
-            .collection('activities')
-            .doc(schedule.actId)
-            .get();
+        final actSnap =
+            await FirebaseFirestore.instance
+                .collection('dia_diem')
+                .doc(widget.locationId)
+                .collection('activities')
+                .doc(schedule.actId)
+                .get();
 
         final act = actSnap.data() ?? {};
 
@@ -107,76 +108,94 @@ class _AdminTimelineListState extends State<AdminTimelineList> {
             Stack(
               children: [
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 13,
+                  ),
                   padding: const EdgeInsets.all(10),
                   width: double.infinity,
                   decoration: BoxDecoration(
                     border: Border.all(color: const Color(MyColor.pr5)),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: items.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Text('Chưa có lịch trình', style: TextStyle(color: Colors.grey)),
-                        )
-                      : Column(
-                          children: items.map((i) {
-                            return AdminTimelineCard(
-                              time: i['time'],
-                              activities: i['activities'],
-                              address: i['address'],
-                              price: i['price'],
-                              completed: i['completed'],
-                              categories: i['categories'],
-                              onTap: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => AdminEditTimelinePage(
-                                      time: i['time'],
-                                      activities: i['activities'],
-                                      address: i['address'],
-                                      price: i['price'],
-                                      completed: i['completed'],
-                                      categories: i['categories'],
-                                      diaDiemId: widget.locationId,
-                                      tripId: widget.tripId,
-                                      timelineId: i['timelineId'],
-                                      scheduleId: i['scheduleId'],
-                                      actId: i['act_id'],
-                                      onRefreshTripData: widget.onRefreshTripData,
-                                    ),
-                                  ),
-                                );
+                  child:
+                      items.isEmpty
+                          ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'Chưa có lịch trình',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                          : Column(
+                            children:
+                                items.map((i) {
+                                  return AdminTimelineCard(
+                                    time: i['time'],
+                                    activities: i['activities'],
+                                    address: i['address'],
+                                    price: i['price'],
+                                    completed: i['completed'],
+                                    categories: i['categories'],
+                                    onTap: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => AdminEditTimelinePage(
+                                                time: i['time'],
+                                                activities: i['activities'],
+                                                address: i['address'],
+                                                price: i['price'],
+                                                completed: i['completed'],
+                                                categories: i['categories'],
+                                                diaDiemId: widget.locationId,
+                                                tripId: widget.tripId,
+                                                timelineId: i['timelineId'],
+                                                scheduleId: i['scheduleId'],
+                                                actId: i['act_id'],
+                                                onRefreshTripData:
+                                                    widget.onRefreshTripData,
+                                              ),
+                                        ),
+                                      );
 
-                                // ✅ Gọi callback nếu có dữ liệu trả về
-                                if (result != null && result is Map) {
-                                  if (result['chiPhi'] != null && widget.onSetPrice != null) {
-                                    widget.onSetPrice!(result['chiPhi']);
-                                  }
-                                  if (result['noiO'] != null && widget.onSetStay != null) {
-                                    widget.onSetStay!(result['noiO']);
-                                  }
-                                  if (result['soAct'] != null && widget.onSetActivityCount != null) {
-                                    widget.onSetActivityCount!(result['soAct']);
-                                  }
-                                  if (result['soEat'] != null && widget.onSetMealCount != null) {
-                                    widget.onSetMealCount!(result['soEat']);
-                                  }
+                                      // ✅ Gọi callback nếu có dữ liệu trả về
+                                      if (result != null && result is Map) {
+                                        if (result['chiPhi'] != null &&
+                                            widget.onSetPrice != null) {
+                                          widget.onSetPrice!(result['chiPhi']);
+                                        }
+                                        if (result['noiO'] != null &&
+                                            widget.onSetStay != null) {
+                                          widget.onSetStay!(result['noiO']);
+                                        }
+                                        if (result['soAct'] != null &&
+                                            widget.onSetActivityCount != null) {
+                                          widget.onSetActivityCount!(
+                                            result['soAct'],
+                                          );
+                                        }
+                                        if (result['soEat'] != null &&
+                                            widget.onSetMealCount != null) {
+                                          widget.onSetMealCount!(
+                                            result['soEat'],
+                                          );
+                                        }
 
-                                  widget.onRefreshTripData(); // luôn sync lại trip từ Firestore
-                                }
+                                        widget
+                                            .onRefreshTripData(); // luôn sync lại trip từ Firestore
+                                      }
 
-                                if (mounted) {
-                                  setState(() {
-                                    _futureSchedules = fetchSchedules();
-                                  });
-                                }
-
-                              },
-                            );
-                          }).toList(),
-                        ),
+                                      if (mounted) {
+                                        setState(() {
+                                          _futureSchedules = fetchSchedules();
+                                        });
+                                      }
+                                    },
+                                  );
+                                }).toList(),
+                          ),
                 ),
                 Positioned(
                   top: 0,
@@ -187,7 +206,11 @@ class _AdminTimelineListState extends State<AdminTimelineList> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(33),
                       boxShadow: const [
-                        BoxShadow(color: Colors.white, blurRadius: 12, spreadRadius: 1),
+                        BoxShadow(
+                          color: Colors.white,
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
                       ],
                     ),
                     child: Text(
@@ -203,51 +226,121 @@ class _AdminTimelineListState extends State<AdminTimelineList> {
                   child: Center(
                     child: InkWell(
                       onTap: () async {
-                        final timelineDocs = await widget.timelineQuery.get();
+                        try {
+                          print('🔘 [+] Nút thêm lịch trình được nhấn');
 
-                        if (timelineDocs.docs.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Không tìm thấy timeline cho ngày này')),
+                          final timelineDocs = await widget.timelineQuery.get();
+                          print(
+                            '📄 Tổng số timeline docs: ${timelineDocs.docs.length}',
                           );
-                          return;
-                        }
 
-                        final timelineDoc = timelineDocs.docs.firstWhere(
-                          (doc) => doc.data()['day_number'] == widget.numberDay,
-                          orElse: () => throw Exception('Không tìm thấy ngày tương ứng'),
-                        );
+                          QueryDocumentSnapshot<Map<String, dynamic>>?
+                          timelineDoc;
 
-                        final scheduleRef = timelineDoc.reference.collection('schedule').doc();
-                        await scheduleRef.set({
-                          'hour': '09:00',
-                          'act_id': '',
-                          'status': false,
-                        });
+                          try {
+                            timelineDoc = timelineDocs.docs.firstWhere((doc) {
+                              final dayRaw = doc.data()['day_number'];
+                              final day =
+                                  dayRaw is int
+                                      ? dayRaw
+                                      : int.tryParse(dayRaw.toString());
+                              print('🔍 Kiểm tra doc với day_number = $day');
+                              return day == widget.numberDay;
+                            });
+                          } catch (_) {
+                            timelineDoc = null;
+                          }
 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AdminEditTimelinePage(
-                              time: const TimeOfDay(hour: 9, minute: 0),
-                              activities: '',
-                              address: '',
-                              price: 0,
-                              completed: false,
-                              categories: '',
-                              diaDiemId: widget.locationId,
-                              tripId: widget.tripId,
-                              timelineId: timelineDoc.id,
-                              scheduleId: scheduleRef.id,
-                              actId: '',
-                              onRefreshTripData: widget.onRefreshTripData,
-                            ),
-                          ),
-                        ).then((_) {
-                          widget.onRefreshTripData();
-                          setState(() {
-                            _futureSchedules = fetchSchedules();
+                          if (timelineDoc == null) {
+                            print(
+                              '❌ Không tìm thấy timeline phù hợp với day = ${widget.numberDay}',
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Không tìm thấy timeline cho ngày này',
+                                  ),
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
+                          final timelineId = timelineDoc.id;
+                          print('✅ Tìm thấy timelineId = $timelineId');
+
+                          final scheduleRef =
+                              timelineDoc.reference
+                                  .collection('schedule')
+                                  .doc();
+                          await scheduleRef.set({
+                            'hour': '09:00',
+                            'act_id': '',
+                            'status': false,
                           });
-                        });
+                          print('✅ Tạo schedule mới: ${scheduleRef.id}');
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => AdminEditTimelinePage(
+                                    time: const TimeOfDay(hour: 9, minute: 0),
+                                    activities: '',
+                                    address: '',
+                                    price: 0,
+                                    completed: false,
+                                    categories: '',
+                                    diaDiemId: widget.locationId,
+                                    tripId: widget.tripId,
+                                    timelineId:
+                                        timelineId, // ✅ đã chắc chắn không null
+                                    scheduleId: scheduleRef.id,
+                                    actId: '',
+                                    onRefreshTripData: widget.onRefreshTripData,
+                                  ),
+                            ),
+                          )..then((result) {
+                            print('⬅️ Quay về với dữ liệu: $result');
+
+                            if (result != null && result is Map) {
+                              if (result['chiPhi'] != null &&
+                                  widget.onSetPrice != null) {
+                                widget.onSetPrice!(result['chiPhi']);
+                              }
+                              if (result['noiO'] != null &&
+                                  widget.onSetStay != null) {
+                                widget.onSetStay!(result['noiO']);
+                              }
+                              if (result['soAct'] != null &&
+                                  widget.onSetActivityCount != null) {
+                                widget.onSetActivityCount!(result['soAct']);
+                              }
+                              if (result['soEat'] != null &&
+                                  widget.onSetMealCount != null) {
+                                widget.onSetMealCount!(result['soEat']);
+                              }
+
+                              widget.onRefreshTripData();
+                              if (mounted) {
+                                setState(() {
+                                  _futureSchedules = fetchSchedules();
+                                });
+                              }
+                            }
+                          });
+                        } catch (e, st) {
+                          print('❗ Lỗi khi thêm lịch trình: $e');
+                          print(st);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Lỗi khi thêm lịch trình: $e'),
+                              ),
+                            );
+                          }
+                        }
                       },
                       child: Container(
                         width: 60,
@@ -256,9 +349,16 @@ class _AdminTimelineListState extends State<AdminTimelineList> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(25),
-                          border: Border.all(color: Color(MyColor.pr4), width: 1.5),
+                          border: Border.all(
+                            color: Color(MyColor.pr4),
+                            width: 1.5,
+                          ),
                           boxShadow: const [
-                            BoxShadow(color: Colors.white, blurRadius: 12, spreadRadius: 1),
+                            BoxShadow(
+                              color: Colors.white,
+                              blurRadius: 12,
+                              spreadRadius: 1,
+                            ),
                           ],
                         ),
                         child: const Text(
@@ -272,7 +372,7 @@ class _AdminTimelineListState extends State<AdminTimelineList> {
                       ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ],

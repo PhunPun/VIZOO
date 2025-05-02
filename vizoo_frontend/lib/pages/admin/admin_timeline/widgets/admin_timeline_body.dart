@@ -11,13 +11,13 @@ import 'package:vizoo_frontend/models/trip_models_json.dart';
 class AdminTimelineBody extends StatefulWidget {
   final String tripId;
   final String locationId;
-  final VoidCallback onRefreshTripData; 
+  final VoidCallback onRefreshTripData;
 
   const AdminTimelineBody({
     super.key,
     required this.tripId,
     required this.locationId,
-    required this.onRefreshTripData, 
+    required this.onRefreshTripData,
   });
 
   @override
@@ -110,29 +110,31 @@ class _AdminTimelineBodyState extends State<AdminTimelineBody> {
       initDate = newDate;
     });
   }
+
   void onSetStay(String newStay) {
-  if (tripData != null) {
-    setState(() {
-      tripData = tripData!.copyWith(noiO: newStay);
-    });
+    if (tripData != null) {
+      setState(() {
+        tripData = tripData!.copyWith(noiO: newStay);
+      });
+    }
   }
-}
 
-void onSetActivityCount(int newCount) {
-  if (tripData != null) {
-    setState(() {
-      tripData = tripData!.copyWith(soAct: newCount);
-    });
+  void onSetActivityCount(int newCount) {
+    if (tripData != null) {
+      setState(() {
+        tripData = tripData!.copyWith(soAct: newCount);
+      });
+    }
   }
-}
 
-void onSetMealCount(int newCount) {
-  if (tripData != null) {
-    setState(() {
-      tripData = tripData!.copyWith(soEat: newCount);
-    });
+  void onSetMealCount(int newCount) {
+    if (tripData != null) {
+      setState(() {
+        tripData = tripData!.copyWith(soEat: newCount);
+      });
+    }
   }
-}
+
   Future<void> refreshTripData() async {
     await fetchTripData();
   }
@@ -147,7 +149,12 @@ void onSetMealCount(int newCount) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AdminTripCard(trip: tripData!),
+          AdminTripCard(
+            trip: tripData!,
+            onDeleted: () {
+              widget.onRefreshTripData(); // ✅ gọi lại hàm từ cha
+            },
+          ),
           Container(
             height: 50,
             margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -170,29 +177,59 @@ void onSetMealCount(int newCount) {
               }).toList(),
               onChanged: (value) async {
                 if (value != null) {
+                  final newSoNgay = int.parse(value);
                   setState(() {
                     _selectedFilterDay = value;
                   });
 
                   try {
+                    // Cập nhật số ngày trong trip
                     await FirebaseFirestore.instance
                         .collection('dia_diem')
                         .doc(widget.locationId)
                         .collection('trips')
                         .doc(widget.tripId)
-                        .update({'so_ngay': int.parse(value)});
+                        .update({'so_ngay': newSoNgay});
+
+                    // Đồng bộ timelines
+                    final timelinesRef = FirebaseFirestore.instance
+                        .collection('dia_diem')
+                        .doc(widget.locationId)
+                        .collection('trips')
+                        .doc(widget.tripId)
+                        .collection('timelines');
+
+                    final currentTimelinesSnap = await timelinesRef.get();
+                    final currentDayNumbers = currentTimelinesSnap.docs
+                        .map((doc) => doc.data()['day_number'] as int)
+                        .toSet();
+
+                    for (int i = 1; i <= newSoNgay; i++) {
+                      if (!currentDayNumbers.contains(i)) {
+                        await timelinesRef.add({'day_number': i});
+                      }
+                    }
+
+                    for (final doc in currentTimelinesSnap.docs) {
+                      final dayNumber = doc.data()['day_number'] as int;
+                      if (dayNumber > newSoNgay) {
+                        await doc.reference.delete();
+                      }
+                    }
+
+                    // Cập nhật local state
+                    setState(() {
+                      so_ngay = newSoNgay;
+                      tripData = tripData!.copyWith(soNgay: newSoNgay);
+                    });
+
+                    await fetchDayNumbers(); // cập nhật lại danh sách ngày mới
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Đã cập nhật số ngày thành công'),
                       ),
                     );
-
-                    setState(() {
-                      so_ngay = int.parse(value);
-                      tripData =
-                          tripData!.copyWith(soNgay: int.parse(value));
-                    });
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Lỗi khi cập nhật: $e')),
@@ -238,57 +275,9 @@ void onSetMealCount(int newCount) {
                 timelineQuery: query,
                 locationId: widget.locationId,
                 tripId: widget.tripId,
-                onRefreshTripData: widget.onRefreshTripData, // ✅ SỬA: dùng callback từ cha
+                onRefreshTripData: widget.onRefreshTripData,
               );
             }).toList(),
-          Container(
-            padding: const EdgeInsets.only(bottom: 30),
-            child: Center(
-              child: ElevatedButton(
-                onPressed: () async {
-                  try {
-                    final newStatus = !tripData!.status!;
-                    await FirebaseFirestore.instance
-                        .collection('dia_diem')
-                        .doc(widget.locationId)
-                        .collection('trips')
-                        .doc(widget.tripId)
-                        .update({'status': newStatus});
-
-                    setState(() {
-                      tripData = tripData!.copyWith(status: newStatus);
-                    });
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã cập nhật trạng thái thành công'),
-                      ),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Lỗi khi cập nhật: $e')),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(MyColor.pr4),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  tripData!.status! ? 'Dừng hành trình' : 'Áp dụng',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

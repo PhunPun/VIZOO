@@ -4,8 +4,13 @@ import 'package:vizoo_frontend/themes/colors/colors.dart';
 
 class AdminTripBody extends StatefulWidget {
   final Map<String, dynamic> filters;
-  const AdminTripBody({super.key, this.filters = const {}});
+  final VoidCallback onReload; // 👈 thêm dòng này
 
+  const AdminTripBody({
+    super.key,
+    this.filters = const {},
+    required this.onReload, // 👈 thêm dòng này
+  });
   @override
   State<AdminTripBody> createState() => _AdminTripBodyState();
 }
@@ -30,7 +35,10 @@ class _AdminTripBodyState extends State<AdminTripBody> {
               ),
             ),
           ),
-          AdminFillterTripList(filters: widget.filters,),
+          AdminFillterTripList(
+            filters: widget.filters,
+            onReload: widget.onReload, // 👈 truyền callback
+          ),
           const SizedBox(height: 20,),
         ],
       ),

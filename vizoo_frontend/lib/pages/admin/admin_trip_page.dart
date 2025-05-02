@@ -50,9 +50,15 @@ class _AdminTripPageState extends State<AdminTripPage> {
               });
             },
           ),
-          AdminTripBody(filters: _filters),
+          AdminTripBody(
+            filters: _filters,
+            onReload: () {
+              setState(() {}); // ✅ reload lại khi xóa
+            },
+          ),
         ],
       ),
+
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Color(MyColor.pr3),
         onPressed: () async {

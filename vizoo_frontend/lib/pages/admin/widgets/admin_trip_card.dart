@@ -9,8 +9,14 @@ import 'package:vizoo_frontend/themes/colors/colors.dart';
 class AdminTripCard extends StatefulWidget {
   final Trip trip;
   final VoidCallback? onTap;
-  const AdminTripCard({super.key, required this.trip, this.onTap});
+  final VoidCallback? onDeleted; // thêm dòng này
 
+const AdminTripCard({
+  super.key,
+  required this.trip,
+  this.onTap,
+  this.onDeleted, // thêm dòng này
+});
   @override
   State<AdminTripCard> createState() => _AdminTripCardState();
 }
@@ -29,7 +35,7 @@ class _AdminTripCardState extends State<AdminTripCard> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã xóa chuyến đi thành công')),
       );
-
+      widget.onDeleted?.call();
       // Bạn có thể gọi thêm setState hay callback để cập nhật lại giao diện sau khi xóa
     } catch (e) {
       ScaffoldMessenger.of(

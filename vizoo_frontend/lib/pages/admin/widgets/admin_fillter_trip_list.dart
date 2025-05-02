@@ -6,7 +6,13 @@ import 'package:vizoo_frontend/pages/admin/widgets/admin_trip_card.dart';
 
 class AdminFillterTripList extends StatelessWidget {
   final Map<String, dynamic> filters;
-  const AdminFillterTripList({super.key, this.filters = const {}});
+  final VoidCallback onReload;
+
+const AdminFillterTripList({
+  super.key,
+  required this.filters,
+  required this.onReload,
+});
 
   get trip => null;
   Future<List<Trip>> _fetchTrips() async {
@@ -116,6 +122,7 @@ class AdminFillterTripList extends StatelessWidget {
                   ),
                 );
               },
+              onDeleted: onReload,
             );
           },
         );

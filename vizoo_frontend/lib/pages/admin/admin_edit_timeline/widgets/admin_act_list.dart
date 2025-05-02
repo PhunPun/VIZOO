@@ -13,6 +13,7 @@ class AdminActList extends StatefulWidget {
   final String categories;
   final String selectedActId;
   final VoidCallback onRefreshTripData; // ✅ thêm callback
+  final void Function(Map<String, dynamic>) onSetResult;
 
   const AdminActList({
     super.key,
@@ -22,7 +23,8 @@ class AdminActList extends StatefulWidget {
     required this.scheduleId,
     required this.categories,
     required this.selectedActId,
-    required this.onRefreshTripData, // ✅ thêm vào constructor
+    required this.onRefreshTripData,
+    required this.onSetResult, // 👈 thêm dòng này
   });
 
   @override
@@ -182,8 +184,17 @@ class _AdminActListState extends State<AdminActList> {
           tripId: widget.tripId,
         );
 
-        widget.onRefreshTripData(); // ✅ gọi để ép cập nhật UI
+        widget.onRefreshTripData();
+
+        // ✅ Gửi kết quả ngược về cha, nhưng không pop
+        widget.onSetResult({
+          'chiPhi': act.price ?? 0,
+          'soAct': 1,
+          'soEat': act.categories == 'eat' ? 1 : 0,
+          'noiO': act.categories == 'hotel' ? act.name : null,
+        });
       },
+
       child: Container(
         margin: const EdgeInsets.only(top: 8),
         padding: const EdgeInsets.only(left: 8),
