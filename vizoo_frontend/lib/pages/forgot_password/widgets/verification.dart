@@ -1,9 +1,30 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/apps/router/router_name.dart';
 
-void showVerificationDialog(BuildContext context) {
+void showVerificationDialog(BuildContext context, String email, String otpSent) {
+  final TextEditingController _otpController = TextEditingController();
+
+  Future<void> _handleAfterOtpVerified(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Đường dẫn đổi mật khẩu đã được gửi đến email của bạn."),
+        ),
+      );
+      context.goNamed(RouterName.login);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Không thể gửi email: $e"),
+        ),
+      );
+    }
+  }
+
   showDialog(
     context: context,
     builder: (BuildContext context) {
@@ -24,12 +45,13 @@ void showVerificationDialog(BuildContext context) {
               ),
               SizedBox(height: 10),
               Text(
-                "A verification code has been sent to your email",
+                "A verification code has been sent to $email",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
               ),
               SizedBox(height: 15),
               TextField(
+                controller: _otpController,
                 decoration: InputDecoration(
                   hintText: "Verification code",
                   filled: true,
@@ -42,8 +64,16 @@ void showVerificationDialog(BuildContext context) {
               ),
               SizedBox(height: 15),
               ElevatedButton(
-                onPressed: () {
-                  context.goNamed(RouterName.changePassword);
+                onPressed: () async {
+                  final inputOtp = _otpController.text.trim();
+                  if (inputOtp == otpSent) {
+                    Navigator.pop(context);
+                    await _handleAfterOtpVerified(email);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Mã xác thực không đúng")),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(MyColor.pr3),
@@ -53,9 +83,9 @@ void showVerificationDialog(BuildContext context) {
                 ),
                 child: Text("Reset Password",
                   style: TextStyle(
-                    color: Color(MyColor.black),
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic
+                      color: Color(MyColor.black),
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic
                   ),
                 ),
               ),
