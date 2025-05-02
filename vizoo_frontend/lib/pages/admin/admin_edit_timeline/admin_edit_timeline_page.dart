@@ -235,7 +235,7 @@ class _AdminEditTimelinePageState extends State<AdminEditTimelinePage> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
-                            child: const Text("Huỷ"),
+                            child: const Text("Huỷ", style: TextStyle(color: Color(MyColor.pr3)),),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),

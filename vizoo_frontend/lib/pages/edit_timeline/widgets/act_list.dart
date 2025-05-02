@@ -89,11 +89,7 @@ class _ActListState extends State<ActList> {
         'act_id': act.id,
         'updated_at': FieldValue.serverTimestamp(),
       });
-
-      await scheduleRef.update({
-        'act_id': act.id,
-        'updated_at': FieldValue.serverTimestamp(),
-      });
+      Navigator.of(context).pop(true);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Đã thay thế bằng hoạt động “${act.name}”")),

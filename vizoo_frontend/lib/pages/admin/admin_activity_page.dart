@@ -50,7 +50,7 @@ class _AdminActivityPageState extends State<AdminActivityPage> {
           onChanged: (value) => newCategory = value.trim(),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy", style: TextStyle(color: Color(MyColor.pr5)),)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Color(MyColor.pr4)),
             onPressed: () async {
@@ -63,7 +63,7 @@ class _AdminActivityPageState extends State<AdminActivityPage> {
                 onCategoryAdded(newCategory!);
               }
             },
-            child: const Text("Thêm"),
+            child: const Text("Thêm", style: TextStyle(color: Color(MyColor.white)),),
           ),
         ],
       ),
@@ -156,7 +156,7 @@ class _AdminActivityPageState extends State<AdminActivityPage> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy", style: TextStyle(color: Color(MyColor.pr5)),)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Color(MyColor.pr4)),
             onPressed: () async {
@@ -177,7 +177,7 @@ class _AdminActivityPageState extends State<AdminActivityPage> {
                 setState(() {});
               }
             },
-            child: const Text("Lưu"),
+            child: const Text("Lưu", style: TextStyle(color: Color(MyColor.white)),),
           ),
         ],
       ),
@@ -192,16 +192,15 @@ class _AdminActivityPageState extends State<AdminActivityPage> {
         title: const Text("Xác nhận xóa"),
         content: const Text("Bạn có chắc chắn muốn xóa hoạt động này không?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Hủy")),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Hủy", style: TextStyle(color: Color(MyColor.pr5)),)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Color(MyColor.pr5)),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Xóa"),
+            child: const Text("Xóa", style: TextStyle(color: Color(MyColor.white)),),
           ),
         ],
       ),
     );
-
     if (confirm == true) {
       await FirebaseFirestore.instance
           .collection('dia_diem')
@@ -306,11 +305,11 @@ class _AdminActivityPageState extends State<AdminActivityPage> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy", style: TextStyle(color: Color(MyColor.pr5)),)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Color(MyColor.pr3)),
             onPressed: _addActivity,
-            child: const Text("Thêm"),
+            child: const Text("Thêm", style: TextStyle(color: Color(MyColor.white)),),
           ),
         ],
       ),

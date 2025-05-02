@@ -165,6 +165,26 @@ class _AdminActListState extends State<AdminActList> {
 
     return InkWell(
       onTap: () async {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Xác nhận chọn hoạt động"),
+            content: Text("Bạn có chắc muốn chọn hoạt động '${act.name}' không?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Hủy", style: TextStyle(color: Color(MyColor.pr3)),),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Xác nhận", style: TextStyle(color: Color(MyColor.pr5)),),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm != true) return;
+
         setState(() => selectedActId = act.id);
 
         final scheduleRef = FirebaseFirestore.instance
@@ -186,14 +206,14 @@ class _AdminActListState extends State<AdminActList> {
 
         widget.onRefreshTripData();
 
-        // ✅ Gửi kết quả ngược về cha, nhưng không pop
         widget.onSetResult({
-          'chiPhi': act.price ?? 0,
+          'chiPhi': act.price,
           'soAct': 1,
           'soEat': act.categories == 'eat' ? 1 : 0,
           'noiO': act.categories == 'hotel' ? act.name : null,
         });
       },
+
 
       child: Container(
         margin: const EdgeInsets.only(top: 8),

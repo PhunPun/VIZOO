@@ -115,7 +115,31 @@ class _AdminPageState extends State<AdminPage> {
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
-              onTap: _logout,
+              onTap: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Xác nhận đăng xuất'),
+                    content: const Text('Bạn có chắc chắn muốn đăng xuất không?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: TextButton.styleFrom(foregroundColor: Color(MyColor.pr3)),
+                        child: const Text('Hủy'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: TextButton.styleFrom(foregroundColor: Color(MyColor.pr5)),
+                        child: const Text('Đăng xuất'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  _logout(); // gọi hàm đăng xuất nếu người dùng xác nhận
+                }
+              },
             ),
           ],
         ),

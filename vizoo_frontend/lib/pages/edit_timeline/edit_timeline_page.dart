@@ -54,11 +54,11 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
     setState(() => actCategories = newCategories);
   }
 
-  /// Đảm bảo chuyến đã được clone vào users/{uid}/selected_trips
   Future<void> _ensureUserTripExists() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final uid = user.uid;
+
     final userTripRef = FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
@@ -68,7 +68,6 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
     final userTripSnap = await userTripRef.get();
     if (userTripSnap.exists) return;
 
-    // Clone data chuyến gốc
     final origTripRef = FirebaseFirestore.instance
         .collection('dia_diem')
         .doc(widget.diaDiemId)
@@ -79,58 +78,29 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
 
     await userTripRef.set(origTripSnap.data()!);
 
-    // Clone timelines và schedule
     final timelinesSnap = await origTripRef.collection('timelines').get();
     for (final tlDoc in timelinesSnap.docs) {
       final userTlRef = userTripRef.collection('timelines').doc(tlDoc.id);
       await userTlRef.set(tlDoc.data());
-      final scheduleSnap = await origTripRef
-          .collection('timelines')
-          .doc(tlDoc.id)
-          .collection('schedule')
-          .get();
+
+      final scheduleSnap = await tlDoc.reference.collection('schedule').get();
       for (final scDoc in scheduleSnap.docs) {
         final userScRef = userTlRef.collection('schedule').doc(scDoc.id);
         await userScRef.set(scDoc.data()!);
       }
     }
   }
-  Future<bool> showDeleteConfirmationDialog(BuildContext context) async {
-    return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Xác nhận xóa'),
-        content: const Text('Bạn có chắc chắn muốn xóa hoạt động này không?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Xóa'),
-          ),
-        ],
-      ),
-    ) ??
-        false;
-  }
 
   Future<void> _toggleCompleted() async {
     final newStatus = !isCompleted;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final uid = user.uid;
 
-    //  clone chuyến
     await _ensureUserTripExists();
-    // Cập nhật status vào user
+
     final scheduleRef = FirebaseFirestore.instance
         .collection('users')
-        .doc(uid)
+        .doc(user.uid)
         .collection('selected_trips')
         .doc(widget.tripId)
         .collection('timelines')
@@ -139,8 +109,33 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
         .doc(widget.scheduleId);
 
     await scheduleRef.update({'status': newStatus});
-    setState(() => isCompleted = newStatus);
+
+    // ✅ báo về đã cập nhật
+    Navigator.of(context).pop(true);
   }
+
+  Future<bool> showDeleteConfirmationDialog(BuildContext context) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Xác nhận xóa'),
+            content: const Text('Bạn có chắc chắn muốn xóa hoạt động này không?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Xóa'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -157,7 +152,7 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
           systemOverlayStyle: SystemUiOverlayStyle.dark,
           leading: IconButton(
             icon: Icon(Platform.isIOS ? Icons.arrow_back_ios : Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(context).pop(true), // ✅ back cũng pop true
           ),
           actions: [
             Container(
@@ -173,21 +168,16 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              // Widget chọn thời gian
               SetTime(
                 diaDiemId: widget.diaDiemId,
                 tripId: widget.tripId,
                 timelineId: widget.timelineId,
                 scheduleId: widget.scheduleId,
               ),
-
-              // Widget chọn danh mục hoạt động
               SetActivities(
                 actCategories: actCategories,
                 onChangeCategories: onChangeCategories,
               ),
-
-              // Danh sách hoạt động (lọc theo danh mục)
               ActList(
                 diaDiemId: widget.diaDiemId,
                 categories: actCategories,
@@ -195,8 +185,6 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                 timelineId: widget.timelineId,
                 scheduleId: widget.scheduleId,
               ),
-
-              // Nút đánh dấu hoàn thành
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -217,24 +205,7 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                     Expanded(
                       flex: 1,
                       child: InkWell(
-                        onTap: () async {
-                          try {
-                            await _toggleCompleted();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  isCompleted
-                                      ? 'Đã đánh dấu hoàn thành'
-                                      : 'Bỏ đánh dấu hoàn thành',
-                                ),
-                              ),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Lỗi: $e')),
-                            );
-                          }
-                        },
+                        onTap: () => _toggleCompleted(), // ✅ sẽ pop true
                         child: Container(
                           width: 20,
                           height: 20,
@@ -252,7 +223,6 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                   ],
                 ),
               ),
-              // Nút xóa hoạt động
               Container(
                 margin: const EdgeInsets.only(bottom: 40),
                 child: ElevatedButton.icon(
@@ -286,7 +256,7 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                         const SnackBar(content: Text('Đã xóa hoạt động.')),
                       );
 
-                      Navigator.of(context).pop(true);
+                      Navigator.of(context).pop(true); // ✅ báo về thay đổi
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Lỗi khi xóa: $e')),
@@ -297,7 +267,6 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                   label: const Text('Xóa hoạt động'),
                 ),
               ),
-
             ],
           ),
         ),

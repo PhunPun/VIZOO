@@ -162,7 +162,10 @@ class _TimelineListState extends State<TimelineList> {
                               ),
                             ),
                           );
-                          if (updated == true) reload();
+                          if (updated == true) {
+                            reload();
+                            widget.onDataChanged?.call(); // báo cho TimelineBody cập nhật TripCard
+                          }
                         },
                       );
                     }).toList(),
@@ -201,7 +204,10 @@ class _TimelineListState extends State<TimelineList> {
                             ),
                           ),
                         );
-                        if (added == true) reload();
+                        if (added == true) {
+                          reload();
+                          widget.onDataChanged?.call();
+                        }
                       },
                       child: Container(
                         width: 80,

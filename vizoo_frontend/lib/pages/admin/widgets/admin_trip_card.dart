@@ -95,29 +95,30 @@ class _AdminTripCardState extends State<AdminTripCard> {
                         if (value == 'delete') {
                           final confirm = await showDialog<bool>(
                             context: context,
-                            builder:
-                                (context) => AlertDialog(
-                                  title: const Text('Xác nhận'),
-                                  content: const Text(
-                                    'Bạn có chắc chắn muốn xóa chuyến đi này không?',
+                            builder: (context) => AlertDialog(
+                              title: const Text('Xác nhận'),
+                              content: const Text(
+                                'Bạn có chắc chắn muốn xóa chuyến đi này không?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Color(MyColor.pr3), 
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed:
-                                          () => Navigator.pop(context, false),
-                                      child: const Text('Hủy'),
-                                    ),
-                                    TextButton(
-                                      onPressed:
-                                          () => Navigator.pop(context, true),
-                                      child: const Text('Xóa'),
-                                    ),
-                                  ],
+                                  child: const Text('Hủy'),
                                 ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Color(MyColor.pr5), 
+                                  ),
+                                  child: const Text('Xóa'),
+                                ),
+                              ],
+                            ),
                           );
-
                           if (confirm == true) {
-                            // 🛠️ Gọi Firestore xóa trip
                             await _deleteTrip();
                           }
                         }

@@ -34,38 +34,53 @@ class _TripCardState extends State<TripCard> {
   late DocumentReference<Map<String, dynamic>> _masterTripRef;
   DocumentReference<Map<String, dynamic>>? _userTripRef;
 
-  DocumentReference<Map<String, dynamic>> get _baseTripRef =>
-      (_useUserData && _userTripRef != null) ? _userTripRef! : _masterTripRef;
-
-  @override
-  void initState() {
-    super.initState();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-
-    _masterTripRef = FirebaseFirestore.instance
-        .collection('dia_diem')
-        .doc(widget.trip.locationId)
-        .collection('trips')
-        .doc(widget.trip.id);
-
-    if (uid != null) {
-      _userTripRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('selected_trips')
-          .doc(widget.trip.id);
-
-      _initData();
-      _checkIfLoved();
+  DocumentReference<Map<String, dynamic>> get _baseTripRef {
+    if (_useUserData && _userTripRef != null) {
+      return _userTripRef!;
     }
-
-    _listenToLoveCount();
+    return _masterTripRef;
   }
 
+  @override
+void initState() {
+  super.initState();
+
+  // Kiểm tra ID hợp lệ trước khi tạo DocumentReference
+  if (widget.trip.id.isEmpty || widget.trip.locationId.isEmpty) {
+    print("[ERROR] trip.id hoặc locationId rỗng!");
+    return;
+  }
+
+  // Luôn có _masterTripRef
+  _masterTripRef = FirebaseFirestore.instance
+      .collection('dia_diem')
+      .doc(widget.trip.locationId)
+      .collection('trips')
+      .doc(widget.trip.id);
+
+  // Nếu có user và trip.id hợp lệ thì tạo _userTripRef
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid != null) {
+    _userTripRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('selected_trips')
+        .doc(widget.trip.id);
+  }
+
+  // Gọi sau khi đảm bảo không có lỗi
+  _initData();
+  _checkIfLoved();
+  _listenToLoveCount();
+}
+
+
   Future<void> _initData() async {
+  try {
     if (_userTripRef != null) {
       final snap = await _userTripRef!.get();
       if (snap.exists) {
+        if (!mounted) return; // tránh lỗi gọi setState sau dispose
         setState(() => _useUserData = true);
       }
     }
@@ -75,7 +90,11 @@ class _TripCardState extends State<TripCard> {
       _loadMealCount(),
       _loadTotalCost(),
     ]);
+  } catch (e) {
+    print('[ERROR] _initData thất bại: $e');
   }
+}
+
 
   void _listenToLoveCount() {
     _loveSubscription = FirebaseFirestore.instance
