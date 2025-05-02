@@ -63,8 +63,8 @@ class _AdminActListState extends State<AdminActList> {
         .get();
 
     return snap.docs
-        .map((doc) => Activity.fromFirestore(doc.data(), id: doc.id))
-        .toList();
+    .map((doc) => Activity.fromFirestore(doc))
+    .toList();
   }
 
   Future<void> updateTripSummary({
