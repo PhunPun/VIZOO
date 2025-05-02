@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -12,11 +11,13 @@ import 'package:vizoo_frontend/models/trip_models_json.dart';
 class TimelineBody extends StatefulWidget {
   final String tripId;
   final String locationId;
+  final VoidCallback? onDataChanged; // ✅ THÊM
 
   const TimelineBody({
     super.key,
     required this.tripId,
     required this.locationId,
+    this.onDataChanged,
   });
 
   @override
@@ -28,7 +29,6 @@ class _TimelineBodyState extends State<TimelineBody> {
   DateTime initDate = DateTime.now();
   List<int> days = [];
 
-
   late final DocumentReference<Map<String, dynamic>> _masterTripRef;
   DocumentReference<Map<String, dynamic>>? _userTripRef;
   bool _useUserData = false;
@@ -36,12 +36,12 @@ class _TimelineBodyState extends State<TimelineBody> {
   @override
   void initState() {
     super.initState();
+
     _masterTripRef = FirebaseFirestore.instance
         .collection('dia_diem')
         .doc(widget.locationId)
         .collection('trips')
-        .doc(widget.tripId)
-    as DocumentReference<Map<String, dynamic>>;
+        .doc(widget.tripId);
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -49,47 +49,44 @@ class _TimelineBodyState extends State<TimelineBody> {
           .collection('users')
           .doc(user.uid)
           .collection('selected_trips')
-          .doc(widget.tripId)
-      as DocumentReference<Map<String, dynamic>>;
+          .doc(widget.tripId);
     }
 
-    // Lần đầu: kiểm tra và fetch dữ liệu
-    _loadTripData().then((_) => _fetchDayNumbers());
+    _loadTripData().then((_) {
+      _fetchDayNumbers();
+      _loadTripDetails();
+    });
   }
 
   Future<void> _loadTripData() async {
     try {
-      DocumentSnapshot<Map<String, dynamic>> snapUser;
       if (_userTripRef != null) {
-        snapUser = await _userTripRef!.get();
+        final snapUser = await _userTripRef!.get();
         if (snapUser.exists) {
-          _useUserData = true;
-          final data = snapUser.data()!;
-          final trip = Trip.fromJson(
-            data,
-            id: widget.tripId,
-            locationId: widget.locationId,
-          );
+          if (!mounted) return;
           setState(() {
-            tripData = trip;
-            initDate = trip.ngayBatDau;
+            _useUserData = true;
+            tripData = Trip.fromJson(
+              snapUser.data()!,
+              id: widget.tripId,
+              locationId: widget.locationId,
+            );
+            initDate = tripData!.ngayBatDau;
           });
           return;
         }
       }
 
-      // Nếu không có trong user -> fetch dia diem
       final snapMaster = await _masterTripRef.get();
       if (snapMaster.exists) {
-        final data = snapMaster.data()!;
-        final trip = Trip.fromJson(
-          data,
-          id: widget.tripId,
-          locationId: widget.locationId,
-        );
+        if (!mounted) return;
         setState(() {
-          tripData = trip;
-          initDate = trip.ngayBatDau;
+          tripData = Trip.fromJson(
+            snapMaster.data()!,
+            id: widget.tripId,
+            locationId: widget.locationId,
+          );
+          initDate = tripData!.ngayBatDau;
         });
       }
     } catch (e) {
@@ -99,7 +96,6 @@ class _TimelineBodyState extends State<TimelineBody> {
 
   Future<void> _fetchDayNumbers() async {
     try {
-      // chọn đúng collection timelines dựa vào _useUserData
       final baseRef = (_useUserData && _userTripRef != null)
           ? _userTripRef!
           : _masterTripRef;
@@ -113,13 +109,79 @@ class _TimelineBodyState extends State<TimelineBody> {
           .map((d) => (d.data()['day_number'] as int))
           .toList();
 
+      if (!mounted) return;
       setState(() {
         days = fetchedDays;
       });
-      print('Các ngày có lịch trình: $days');
     } catch (e) {
       print('Lỗi khi lấy dữ liệu ngày: $e');
     }
+  }
+
+  // ✅ Tải lại dữ liệu cho TripCard
+  Future<void> _loadTripDetails() async {
+    await Future.wait([
+      _loadActivityCount(),
+      _loadMealCount(),
+      _loadTotalCost(),
+    ]);
+  }
+
+  Future<void> _loadActivityCount() async {
+    int count = 0;
+    final timelines = await _baseTripRef.collection('timelines').get();
+    for (var tl in timelines.docs) {
+      final sch = await tl.reference.collection('schedule').get();
+      count += sch.docs.length;
+    }
+    if (!mounted) return;
+    setState(() => tripData = tripData?.copyWith(soAct: count));
+  }
+
+  Future<void> _loadMealCount() async {
+    int count = 0;
+    final timelines = await _baseTripRef.collection('timelines').get();
+    for (var tl in timelines.docs) {
+      final sch = await tl.reference.collection('schedule').get();
+      for (var doc in sch.docs) {
+        final actId = doc.data()['act_id'] as String?;
+        if (actId == null) continue;
+        final actDoc = await FirebaseFirestore.instance
+            .collection('dia_diem')
+            .doc(widget.locationId)
+            .collection('activities')
+            .doc(actId)
+            .get();
+        if (actDoc.exists && actDoc.data()?['categories'] == 'eat') {
+          count++;
+        }
+      }
+    }
+    if (!mounted) return;
+    setState(() => tripData = tripData?.copyWith(soEat: count));
+  }
+
+  Future<void> _loadTotalCost() async {
+    double sum = 0;
+    final timelines = await _baseTripRef.collection('timelines').get();
+    for (var tl in timelines.docs) {
+      final sch = await tl.reference.collection('schedule').get();
+      for (var doc in sch.docs) {
+        final actId = doc.data()['act_id'] as String?;
+        if (actId == null) continue;
+        final actDoc = await FirebaseFirestore.instance
+            .collection('dia_diem')
+            .doc(widget.locationId)
+            .collection('activities')
+            .doc(actId)
+            .get();
+        if (actDoc.exists) {
+          sum += (actDoc.data()?['price'] ?? 0).toDouble();
+        }
+      }
+    }
+    if (!mounted) return;
+    setState(() => tripData = tripData?.copyWith(chiPhi: sum.toInt()));
   }
 
   void onSetPeople(int newCount) {
@@ -130,37 +192,20 @@ class _TimelineBodyState extends State<TimelineBody> {
     }
   }
 
-  void onSetCost(int newCost) {
-    if (tripData != null) {
-      setState(() {
-        tripData = tripData!.copyWith(chiPhi: newCost);
-      });
-    }
-  }
-
   void onChangeDate(DateTime newDate) {
-
     setState(() {
       initDate = newDate;
     });
   }
+
+  DocumentReference<Map<String, dynamic>> get _baseTripRef =>
+      (_useUserData && _userTripRef != null) ? _userTripRef! : _masterTripRef;
 
   @override
   Widget build(BuildContext context) {
     if (tripData == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    // chuẩn bị query cho TimelineList
-    Query<Map<String, dynamic>> timelineQuery = (_useUserData && _userTripRef != null)
-        ? _userTripRef!.collection('timelines')
-        .where('day_number', isEqualTo: 0)
-        : FirebaseFirestore.instance
-        .collection('dia_diem')
-        .doc(widget.locationId)
-        .collection('trips')
-        .doc(widget.tripId)
-        .collection('timelines')
-        .where('day_number', isEqualTo: 0);
 
     return SingleChildScrollView(
       child: Column(
@@ -171,7 +216,7 @@ class _TimelineBodyState extends State<TimelineBody> {
             peopleNum: tripData!.soNguoi,
             cost: tripData!.chiPhi,
             onSetPeople: onSetPeople,
-            onSetCost: onSetCost,
+            onSetCost: (_) => _loadTripDetails(),
             diaDiemId: widget.locationId,
             tripId: widget.tripId,
           ),
@@ -183,7 +228,6 @@ class _TimelineBodyState extends State<TimelineBody> {
             tripId: widget.tripId,
           ),
           const SizedBox(height: 16),
-
           if (days.isEmpty)
             const Padding(
               padding: EdgeInsets.all(16.0),
@@ -191,129 +235,24 @@ class _TimelineBodyState extends State<TimelineBody> {
             )
           else
             ...days.map((day) {
-              // Tạo query để lấy đúng timeline docs của ngày này
-              final query = FirebaseFirestore.instance
-                  .collection('dia_diem')
-                  .doc(widget.locationId)
-                  .collection('trips')
-                  .doc(widget.tripId)
+              final query = _baseTripRef
                   .collection('timelines')
                   .where('day_number', isEqualTo: day);
-                  //.orderBy('hour');
 
               return TimelineList(
                 numberDay: day,
                 timelineQuery: query,
                 locationId: widget.locationId,
                 tripId: widget.tripId,
-                  onDataChanged: () async {
-                    await _loadTripData();
-                    await _fetchDayNumbers();
-                  }
+                onDataChanged: () async {
+                  await _loadTripData();
+                  await _fetchDayNumbers();
+                  await _loadTripDetails(); // ✅ cập nhật lại TripCard
+                  widget.onDataChanged?.call();
+                },
               );
             }).toList(),
-          SizedBox(height: 12,),
-          Container(
-            padding: const EdgeInsets.only(bottom: 30),
-            child: Center(
-              child: tripData == null
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                onPressed: tripData!.status == null
-                    ? null
-                    : () async {
-                  try {
-                    final user = FirebaseAuth.instance.currentUser;
-                    if (user == null) return;
-
-                    final selectedTrips = await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user.uid)
-                        .collection('selected_trips')
-                        .where('status', isEqualTo: true)
-                        .get();
-
-                    // Nếu đang áp dụng mới và đã có 1 trip status true khác
-                    if (!tripData!.status! && selectedTrips.docs.isNotEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Bạn đã có một hành trình đang áp dụng. Vui lòng dừng hoặc hoàn thành hành trình đó trước.'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    // Nếu chưa lưu vào user -> copy như cũ
-                    if (!_useUserData && _userTripRef != null) {
-                      final masterSnap = await _masterTripRef.get();
-                      if (masterSnap.exists) {
-                        await _userTripRef!.set({
-                          ...masterSnap.data()!,
-                          'saved_at': FieldValue.serverTimestamp(),
-                          'location_id': widget.locationId,
-                        }, SetOptions(merge: true));
-
-                        final tlSnap = await _masterTripRef.collection('timelines').get();
-                        for (var tl in tlSnap.docs) {
-                          await _userTripRef!
-                              .collection('timelines')
-                              .doc(tl.id)
-                              .set(tl.data(), SetOptions(merge: true));
-                          final schSnap = await tl.reference.collection('schedule').get();
-                          for (var sch in schSnap.docs) {
-                            await _userTripRef!
-                                .collection('timelines')
-                                .doc(tl.id)
-                                .collection('schedule')
-                                .doc(sch.id)
-                                .set(sch.data(), SetOptions(merge: true));
-                          }
-                        }
-                        _useUserData = true;
-                      }
-                    }
-
-                    final targetRef = (_useUserData && _userTripRef != null)
-                        ? _userTripRef!
-                        : _masterTripRef;
-
-                    final newStatus = !(tripData!.status!);
-                    await targetRef.update({
-                      'status': newStatus,
-                      'location_id': widget.locationId,
-                    });
-
-                    setState(() {
-                      tripData = tripData!.copyWith(status: newStatus);
-                    });
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Áp dụng thành công')),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Lỗi khi cập nhật: $e')),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(MyColor.pr4),
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  tripData!.status! ? 'Dừng hành trình' : 'Áp dụng',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          const SizedBox(height: 32),
         ],
       ),
     );

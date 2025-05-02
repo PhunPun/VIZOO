@@ -5,9 +5,23 @@ import 'package:vizoo_frontend/pages/timeline/widgets/timeline_body.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/widgets/hearder.dart';
 
-class YourTripPage extends StatelessWidget {
+class YourTripPage extends StatefulWidget {
   const YourTripPage({super.key});
 
+  @override
+  State<YourTripPage> createState() => _YourTripPageState();
+}
+
+class _YourTripPageState extends State<YourTripPage> {
+  late Future<QuerySnapshot<Map<String, dynamic>>> _futureTrips;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureTrips = _fetchOngoingTrips();
+  }
+
+  /// Gọi lại truy vấn chuyến đi đang tiến hành
   Future<QuerySnapshot<Map<String, dynamic>>> _fetchOngoingTrips() {
     final uid = FirebaseAuth.instance.currentUser!.uid;
     return FirebaseFirestore.instance
@@ -18,25 +32,34 @@ class YourTripPage extends StatelessWidget {
         .get();
   }
 
+  /// Gọi lại setState để FutureBuilder rebuild
+  void _refreshTrips() {
+    setState(() {
+      _futureTrips = _fetchOngoingTrips();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      future: _fetchOngoingTrips(),
+      future: _futureTrips,
       builder: (ctx, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+
         if (snap.hasError) {
           return Center(child: Text('Lỗi: ${snap.error}'));
         }
+
         final docs = snap.data?.docs ?? [];
+
         if (docs.isEmpty) {
           return const Center(child: Text('Chưa có chuyến nào đang tiến hành.'));
         }
 
         return SingleChildScrollView(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 38),
@@ -52,7 +75,6 @@ class YourTripPage extends StatelessWidget {
                   ),
                 ),
               ),
-
               ...docs.map((doc) {
                 final data = doc.data();
                 final tripId = doc.id;
@@ -68,11 +90,13 @@ class YourTripPage extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: TimelineBody(
+                    key: ValueKey(tripId), // ép rebuild nếu cần
                     tripId: tripId,
                     locationId: locationId,
+                    onDataChanged: _refreshTrips, // ✅ gọi lại nếu bên trong thay đổi
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         );
