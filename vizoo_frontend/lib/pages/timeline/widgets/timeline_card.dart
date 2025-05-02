@@ -11,6 +11,7 @@ class TimelineCard extends StatelessWidget {
   final bool completed;
   final String categories;
   final VoidCallback onTap;
+  final VoidCallback onToggleStatus;
 
   const TimelineCard({
     super.key,
@@ -21,6 +22,7 @@ class TimelineCard extends StatelessWidget {
     required this.completed,
     required this.categories,
     required this.onTap,
+    required this.onToggleStatus,
   });
 
   @override
@@ -86,6 +88,7 @@ class TimelineCard extends StatelessWidget {
                   ],
                 )
             ),
+            // Price without overlapping checkmark
             Expanded(
                 flex: 4,
                 child: Align(
@@ -102,19 +105,30 @@ class TimelineCard extends StatelessWidget {
                   ),
                 )
             ),
+            // Separate the checkmark with padding
+            SizedBox(width: 16),
+            // Checkmark icon with better positioning
+            GestureDetector(
+              onTap: onToggleStatus,
+              child: Container(
+                padding: EdgeInsets.all(4),
+                child: completed
+                    ? SvgPicture.asset(
+                  'assets/icons/done.svg',
+                  width: 20,
+                  height: 20,
+                )
+                    : Icon(
+                  Icons.radio_button_unchecked,
+                  color: Colors.grey,
+                  size: 20,
+                ),
+              ),
+            ),
             SizedBox(width: 8),
-            completed
-                ? SvgPicture.asset(
-              'assets/icons/done.svg',
-              width: 20,
-              height: 20,
-            )
-                : SizedBox.shrink(),
           ],
         ),
       ),
     );
   }
 }
-
-
