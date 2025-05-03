@@ -256,7 +256,7 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
                         const SnackBar(content: Text('Đã xóa hoạt động.')),
                       );
 
-                      Navigator.of(context).pop(true); // ✅ báo về thay đổi
+                      Navigator.of(context).pop(true);
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Lỗi khi xóa: $e')),
