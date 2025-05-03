@@ -293,8 +293,8 @@ void initState() {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfo("Hoạt động", _activityCount),
-                    _buildInfo("Bữa ăn", _mealCount),
+                    _buildInfo("Hoạt động", widget.trip.soAct),
+                    _buildInfo("Bữa ăn", widget.trip.soEat),
                     _buildInfo("Số người", widget.trip.soNguoi),
                   ],
                 ),
@@ -305,7 +305,7 @@ void initState() {
                     _buildInfo("Nơi ở", widget.trip.noiO, isText: true),
                     _buildInfo("Số ngày", widget.trip.soNgay),
                     _buildInfo("Chi phí",
-                        "${NumberFormat('#,###', 'vi_VN').format(widget.trip.soNguoi * _totalCost)}đ",
+                        "${NumberFormat('#,###', 'vi_VN').format(widget.trip.chiPhi)}đ",
                         isText: true),
                     Row(
                       children: [

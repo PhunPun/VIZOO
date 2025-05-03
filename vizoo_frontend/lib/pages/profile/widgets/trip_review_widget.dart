@@ -120,11 +120,11 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Hủy'),
+                    child: const Text('Hủy', style: TextStyle(color: Color(MyColor.pr3)),),
                   ),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Xóa'),
+                    child: const Text('Xóa', style: TextStyle(color: Color(MyColor.pr5)),),
                   ),
                 ],
               ),

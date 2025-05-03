@@ -12,7 +12,7 @@ class AdminActList extends StatefulWidget {
   final String scheduleId;
   final String categories;
   final String selectedActId;
-  final VoidCallback onRefreshTripData; // ✅ thêm callback
+  final VoidCallback onRefreshTripData;
   final void Function(Map<String, dynamic>) onSetResult;
 
   const AdminActList({
@@ -24,7 +24,7 @@ class AdminActList extends StatefulWidget {
     required this.categories,
     required this.selectedActId,
     required this.onRefreshTripData,
-    required this.onSetResult, // 👈 thêm dòng này
+    required this.onSetResult,
   });
 
   @override
@@ -34,6 +34,7 @@ class AdminActList extends StatefulWidget {
 class _AdminActListState extends State<AdminActList> {
   late Future<List<Activity>> _activityFuture;
   late String selectedActId;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -62,9 +63,7 @@ class _AdminActListState extends State<AdminActList> {
         .where('categories', isEqualTo: category)
         .get();
 
-    return snap.docs
-    .map((doc) => Activity.fromFirestore(doc))
-    .toList();
+    return snap.docs.map((doc) => Activity.fromFirestore(doc)).toList();
   }
 
   Future<void> updateTripSummary({
@@ -128,6 +127,10 @@ class _AdminActListState extends State<AdminActList> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isProcessing) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return FutureBuilder<List<Activity>>(
       future: _activityFuture,
       builder: (ctx, snap) {
@@ -169,15 +172,15 @@ class _AdminActListState extends State<AdminActList> {
           context: context,
           builder: (_) => AlertDialog(
             title: const Text("Xác nhận chọn hoạt động"),
-            content: Text("Bạn có chắc muốn chọn hoạt động '${act.name}' không?"),
+            content: Text("Bạn có chắc muốn chọn hoạt động '\${act.name}' không?"),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text("Hủy", style: TextStyle(color: Color(MyColor.pr3)),),
+                child: const Text("Hủy", style: TextStyle(color: Color(MyColor.pr3))),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text("Xác nhận", style: TextStyle(color: Color(MyColor.pr5)),),
+                child: const Text("Xác nhận", style: TextStyle(color: Color(MyColor.pr5))),
               ),
             ],
           ),
@@ -185,7 +188,10 @@ class _AdminActListState extends State<AdminActList> {
 
         if (confirm != true) return;
 
-        setState(() => selectedActId = act.id);
+        setState(() {
+          _isProcessing = true;
+          selectedActId = act.id;
+        });
 
         final scheduleRef = FirebaseFirestore.instance
             .collection('dia_diem')
@@ -207,14 +213,17 @@ class _AdminActListState extends State<AdminActList> {
         widget.onRefreshTripData();
 
         widget.onSetResult({
+          'actId': act.id,
           'chiPhi': act.price,
           'soAct': 1,
           'soEat': act.categories == 'eat' ? 1 : 0,
           'noiO': act.categories == 'hotel' ? act.name : null,
         });
+
+        if (mounted) {
+          setState(() => _isProcessing = false);
+        }
       },
-
-
       child: Container(
         margin: const EdgeInsets.only(top: 8),
         padding: const EdgeInsets.only(left: 8),
