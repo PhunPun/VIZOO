@@ -8,48 +8,42 @@ class WelcomeBody extends StatelessWidget {
   const WelcomeBody({super.key});
 
   void addSampleActivities() async {
-  final activitiesRef = FirebaseFirestore.instance
-      .collection("dia_diem")
-      .doc("4eJDHyp6eYbE1G8RwMyw") // Đà Lạt
-      .collection('activities');
+  final activitiesRefHanoi = FirebaseFirestore.instance
+    .collection("dia_diem")
+    .doc("d6pQM0l3VVIHpRWwc2s8") // Hà Nội
+    .collection('activities');
 
-  // --- eat ---
-  await activitiesRef.add({'name': 'Bánh căn Nhà Chung', 'address': '13 Nhà Chung, Đà Lạt', 'categories': 'eat', 'price': 30000});
-  await activitiesRef.add({'name': 'Nem nướng Bà Hùng', 'address': '254 Phan Đình Phùng, Đà Lạt', 'categories': 'eat', 'price': 50000});
-  await activitiesRef.add({'name': 'Lẩu gà lá é Tao Ngộ', 'address': '5 3 Tháng 4, Đà Lạt', 'categories': 'eat', 'price': 200000});
-  await activitiesRef.add({'name': 'Bánh mì xíu mại Hoàng Diệu', 'address': '26 Hoàng Diệu, Đà Lạt', 'categories': 'eat', 'price': 25000});
-  await activitiesRef.add({'name': 'Bánh ướt lòng gà Long', 'address': '202 Phan Đình Phùng, Đà Lạt', 'categories': 'eat', 'price': 40000});
-  await activitiesRef.add({'name': 'Cháo ếch Singapore 151', 'address': '151 Bùi Thị Xuân, Đà Lạt', 'categories': 'eat', 'price': 60000});
+// --- eat ---
+await activitiesRefHanoi.add({'name': 'Phở Thìn Bờ Hồ', 'address': '61 Đinh Tiên Hoàng, Hoàn Kiếm, Hà Nội', 'categories': 'eat', 'price': 50000});
+await activitiesRefHanoi.add({'name': 'Bún chả Hương Liên', 'address': '24 Lê Văn Hưu, Hai Bà Trưng, Hà Nội', 'categories': 'eat', 'price': 50000});
+await activitiesRefHanoi.add({'name': 'Chả cá Lã Vọng', 'address': '14 Chả Cá, Hoàn Kiếm, Hà Nội', 'categories': 'eat', 'price': 150000});
+await activitiesRefHanoi.add({'name': 'Bún đậu mắm tôm Mơ', 'address': '1B Ngõ Tràng Tiền, Hoàn Kiếm, Hà Nội', 'categories': 'eat', 'price': 40000});
+await activitiesRefHanoi.add({'name': 'Xôi Yến', 'address': '35B Nguyễn Hữu Huân, Hoàn Kiếm, Hà Nội', 'categories': 'eat', 'price': 35000});
 
-  // --- drink ---
-  await activitiesRef.add({'name': 'Cafe Tùng', 'address': '06 Khu Hòa Bình, Đà Lạt', 'categories': 'drink', 'price': 50000});
-  await activitiesRef.add({'name': 'An Cafe', 'address': '63Bis Đường 3/2, Đà Lạt', 'categories': 'drink', 'price': 60000});
-  await activitiesRef.add({'name': 'The Married Beans', 'address': '6 Nguyễn Chí Thanh, Đà Lạt', 'categories': 'drink', 'price': 70000});
-  await activitiesRef.add({'name': 'La Viet Coffee', 'address': '200 Nguyễn Công Trứ, Đà Lạt', 'categories': 'drink', 'price': 70000});
-  await activitiesRef.add({'name': 'Dalaland', 'address': 'Đèo Mimosa, Đà Lạt', 'categories': 'drink', 'price': 90000});
-  await activitiesRef.add({'name': 'The Wilder Nest', 'address': 'Đèo Prenn, Đà Lạt', 'categories': 'drink', 'price': 80000});
-  await activitiesRef.add({'name': 'Cafe Panorama', 'address': 'Đèo Trại Mát, Đà Lạt', 'categories': 'drink', 'price': 80000});
+// --- drink ---
+await activitiesRefHanoi.add({'name': 'The Note Coffee', 'address': '64 Lương Văn Can, Hoàn Kiếm, Hà Nội', 'categories': 'drink', 'price': 45000});
+await activitiesRefHanoi.add({'name': 'Cafe Giảng', 'address': '39 Nguyễn Hữu Huân, Hoàn Kiếm, Hà Nội', 'categories': 'drink', 'price': 40000});
+await activitiesRefHanoi.add({'name': 'Cong Cafe', 'address': '54 Mã Mây, Hoàn Kiếm, Hà Nội', 'categories': 'drink', 'price': 45000});
+await activitiesRefHanoi.add({'name': 'Tranquil Books & Coffee', 'address': '5 Nguyễn Quang Bích, Hoàn Kiếm, Hà Nội', 'categories': 'drink', 'price': 50000});
+await activitiesRefHanoi.add({'name': 'Serein Cafe & Lounge', 'address': '16 Trần Nhật Duật, Long Biên, Hà Nội', 'categories': 'drink', 'price': 60000});
 
-  // --- play ---
-  await activitiesRef.add({'name': 'Thung lũng Tình Yêu', 'address': '07 Mai Anh Đào, Đà Lạt', 'categories': 'play', 'price': 250000});
-  await activitiesRef.add({'name': 'Hồ Xuân Hương', 'address': 'Trung tâm thành phố, Đà Lạt', 'categories': 'play', 'price': 0});
-  await activitiesRef.add({'name': 'Langbiang', 'address': 'Lạc Dương, Đà Lạt', 'categories': 'play', 'price': 50000});
-  await activitiesRef.add({'name': 'Đồi chè Cầu Đất', 'address': 'Xuân Trường, Đà Lạt', 'categories': 'play', 'price': 30000});
-  await activitiesRef.add({'name': 'Chợ đêm Đà Lạt', 'address': 'Nguyễn Thị Minh Khai, Đà Lạt', 'categories': 'play', 'price': 0});
-  await activitiesRef.add({'name': 'Nhà thờ Con Gà', 'address': '15 Trần Phú, Đà Lạt', 'categories': 'play', 'price': 0});
-  await activitiesRef.add({'name': 'Dinh Bảo Đại', 'address': '01 Triệu Việt Vương, Đà Lạt', 'categories': 'play', 'price': 40000});
-  await activitiesRef.add({'name': 'Quảng trường Lâm Viên', 'address': 'Trần Quốc Toản, Đà Lạt', 'categories': 'play', 'price': 0});
-  await activitiesRef.add({'name': 'Crazy House', 'address': '03 Huỳnh Thúc Kháng, Đà Lạt', 'categories': 'play', 'price': 60000});
+// --- play ---
+await activitiesRefHanoi.add({'name': 'Hồ Gươm', 'address': 'Hoàn Kiếm, Hà Nội', 'categories': 'play', 'price': 0});
+await activitiesRefHanoi.add({'name': 'Lăng Bác', 'address': 'Số 2 Hùng Vương, Ba Đình, Hà Nội', 'categories': 'play', 'price': 0});
+await activitiesRefHanoi.add({'name': 'Văn Miếu - Quốc Tử Giám', 'address': '58 Quốc Tử Giám, Đống Đa, Hà Nội', 'categories': 'play', 'price': 30000});
+await activitiesRefHanoi.add({'name': 'Phố cổ Hà Nội', 'address': 'Hoàn Kiếm, Hà Nội', 'categories': 'play', 'price': 0});
+await activitiesRefHanoi.add({'name': 'Chùa Trấn Quốc', 'address': 'Thanh Niên, Tây Hồ, Hà Nội', 'categories': 'play', 'price': 0});
+await activitiesRefHanoi.add({'name': 'Hoàng thành Thăng Long', 'address': '19C Hoàng Diệu, Ba Đình, Hà Nội', 'categories': 'play', 'price': 30000});
+await activitiesRefHanoi.add({'name': 'Bảo tàng Dân tộc học Việt Nam', 'address': 'Nguyễn Văn Huyên, Cầu Giấy, Hà Nội', 'categories': 'play', 'price': 40000});
 
-  // --- hotel ---
-  await activitiesRef.add({'name': 'Dalat Palace Heritage Hotel', 'address': '02 Trần Phú, Đà Lạt', 'categories': 'hotel', 'price': 5000000});
-  await activitiesRef.add({'name': 'Ana Mandara Villas Dalat Resort & Spa', 'address': 'Le Lai, Đà Lạt', 'categories': 'hotel', 'price': 4000000});
-  await activitiesRef.add({'name': 'Terracotta Hotel & Resort', 'address': 'Zone 7.9, Tuyền Lâm Lake, Đà Lạt', 'categories': 'hotel', 'price': 3000000});
-  await activitiesRef.add({'name': 'Dalat Edensee Lake Resort & Spa', 'address': 'Tuyền Lâm Lake, Đà Lạt', 'categories': 'hotel', 'price': 4500000});
-  await activitiesRef.add({'name': 'Swiss-BelResort Tuyen Lam', 'address': 'Zone 7&8, Tuyền Lâm Lake, Đà Lạt', 'categories': 'hotel', 'price': 2500000});
-  await activitiesRef.add({'name': 'Ladalat Hotel', 'address': '106A Mai Anh Đào, Đà Lạt', 'categories': 'hotel', 'price': 2000000});
-  await activitiesRef.add({'name': 'Colline Hotel', 'address': '10 Phan Bội Châu, Đà Lạt', 'categories': 'hotel', 'price': 1800000});
-  await activitiesRef.add({'name': 'Mường Thanh Holiday Đà Lạt', 'address': '42 Phan Bội Châu, Đà Lạt', 'categories': 'hotel', 'price': 1700000});
+// --- hotel ---
+await activitiesRefHanoi.add({'name': 'Sofitel Legend Metropole Hanoi', 'address': '15 Ngô Quyền, Hoàn Kiếm, Hà Nội', 'categories': 'hotel', 'price': 5500000});
+await activitiesRefHanoi.add({'name': 'Lotte Hotel Hanoi', 'address': '54 Liễu Giai, Ba Đình, Hà Nội', 'categories': 'hotel', 'price': 4000000});
+await activitiesRefHanoi.add({'name': 'Apricot Hotel', 'address': '136 Hàng Trống, Hoàn Kiếm, Hà Nội', 'categories': 'hotel', 'price': 3500000});
+await activitiesRefHanoi.add({'name': 'Hotel de l’Opera Hanoi', 'address': '29 Tràng Tiền, Hoàn Kiếm, Hà Nội', 'categories': 'hotel', 'price': 3200000});
+await activitiesRefHanoi.add({'name': 'Pan Pacific Hanoi', 'address': '1 Thanh Niên, Ba Đình, Hà Nội', 'categories': 'hotel', 'price': 3000000});
+await activitiesRefHanoi.add({'name': 'Melia Hanoi', 'address': '44B Lý Thường Kiệt, Hoàn Kiếm, Hà Nội', 'categories': 'hotel', 'price': 2800000});
+await activitiesRefHanoi.add({'name': 'Hanoi Pearl Hotel', 'address': '6 Bảo Khánh, Hoàn Kiếm, Hà Nội', 'categories': 'hotel', 'price': 2000000});
 }
 
   void addScheduleItems() async {
