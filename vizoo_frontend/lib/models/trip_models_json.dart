@@ -17,6 +17,7 @@ class Trip {
   final int soNgay;
   final int soNguoi;
   final bool status;
+  final int? check;
 
   Trip({
     required this.id,
@@ -34,6 +35,7 @@ class Trip {
     required this.soNgay,
     required this.soNguoi,
     required this.status,
+    required this.check,
   });
 
 
@@ -55,7 +57,10 @@ class Trip {
         soEat: json['so_eat'] as int,
         soNgay: json['so_ngay'] as int,
         soNguoi: json['so_nguoi'] as int,
-        status: json['status'] is bool, userId: '',
+        status: json['status'] as bool? ?? false, userId: '',
+        check: json.containsKey('check')
+            ? (json['check'] as int?)
+            : null,
     );
   }
 
@@ -73,6 +78,7 @@ class Trip {
       'so_ngay': soNgay,
       'so_nguoi': soNguoi,
       'status': status,
+      'check': check,
     };
   }
   factory Trip.fromJson1(Map<String, dynamic> json, {
@@ -94,6 +100,7 @@ class Trip {
       soNgay: json['so_ngay'] as int,
       soNguoi: json['so_nguoi'] as int,
       status: (json['status'] ?? false) as bool, locationId: '',
+      check: json['check'] as int?,
     );
   }
 
@@ -128,6 +135,7 @@ class Trip {
     int? soNgay,
     int? soNguoi,
     bool? status,
+    int? check,
   }) {
     return Trip(
       id: id ?? this.id,
@@ -144,6 +152,7 @@ class Trip {
       soNgay: soNgay ?? this.soNgay,
       soNguoi: soNguoi ?? this.soNguoi,
       status: status ?? this.status, userId: '',
+      check: check ?? this.check,
     );
   }
 }

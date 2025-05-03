@@ -93,7 +93,7 @@ class _YourTripPageState extends State<YourTripPage> {
                     key: ValueKey(tripId), // ép rebuild nếu cần
                     tripId: tripId,
                     locationId: locationId,
-                    onDataChanged: _refreshTrips, // ✅ gọi lại nếu bên trong thay đổi
+                   // onDataChanged: _refreshTrips, // ✅ gọi lại nếu bên trong thay đổi
                   ),
                 );
               }),

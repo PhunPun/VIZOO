@@ -14,6 +14,8 @@ class TimelineList extends StatefulWidget {
   final String locationId;
   final String tripId;
   final VoidCallback? onDataChanged;
+  // Thêm callback khi trạng thái hoạt động thay đổi
+  final VoidCallback? onActivityStatusChanged;
 
   const TimelineList({
     Key? key,
@@ -22,6 +24,7 @@ class TimelineList extends StatefulWidget {
     required this.locationId,
     required this.tripId,
     this.onDataChanged,
+    this.onActivityStatusChanged,
   }) : super(key: key);
 
   @override
