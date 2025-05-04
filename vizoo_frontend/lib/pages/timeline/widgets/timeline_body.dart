@@ -474,11 +474,11 @@ void didChangeDependencies() {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Để sau'),
+                      child: const Text('Để sau', style: TextStyle(color: Color(MyColor.pr3)),),
                     ),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Đánh giá ngay'),
+                      child: const Text('Đánh giá ngay', style: TextStyle(color: Color(MyColor.pr5)),),
                     ),
                   ],
                 ),
@@ -614,11 +614,11 @@ void didChangeDependencies() {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Hủy'),
+                    child: const Text('Hủy', style: TextStyle(color: Color(MyColor.pr3)),),
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Xác nhận'),
+                    child: const Text('Xác nhận', style: TextStyle(color: Color(MyColor.pr5)),),
                   ),
                 ],
               ),
