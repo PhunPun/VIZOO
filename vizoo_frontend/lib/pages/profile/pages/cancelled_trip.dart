@@ -52,7 +52,7 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _cancelledTrips = [];
   String _errorMessage = '';
-  final TripDataService _tripService = TripDataService(); // Sử dụng service đã cải tiến
+  final TripDataService _tripService = TripDataService();
 
   @override
   void initState() {
@@ -67,21 +67,11 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
     });
 
     try {
-      // Sử dụng service đã cải tiến để lấy dữ liệu
+      // Sử dụng service đã cải tiến để lấy dữ liệu trực tiếp từ user_trip và selected_trips
       final trips = await _tripService.getUserTrips(tripStatus: 2);
-      
-      // Đảm bảo cập nhật số lượng hoạt động và bữa ăn cho mỗi chuyến đi
-      for (var trip in trips) {
-        if (trip.containsKey('se_trip_id') && trip['se_trip_id'].toString().isNotEmpty) {
-          await _tripService.updateActivityAndMealCounts(trip['se_trip_id']);
-        }
-      }
-      
-      // Tải lại dữ liệu đã cập nhật
-      final updatedTrips = await _tripService.getUserTrips(tripStatus: 2);
 
       setState(() {
-        _cancelledTrips = updatedTrips;
+        _cancelledTrips = trips;
         _isLoading = false;
       });
     } catch (e) {
@@ -139,20 +129,20 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
     BuildContext context,
     Map<String, dynamic> trip,
   ) {
-    // Create action buttons
+    // Tạo nút hành động
     final List<Widget> actionButtons = [
-      
       const SizedBox(width: 8),
       ElevatedButton(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => TimelinePage(
-                tripId: trip['trip_id'],
-                locationId: trip['location_id'],
-                se_tripId: trip['se_trip_id'],
-              ),
+              builder:
+                  (context) => TimelinePage(
+                    tripId: trip['trip_id'],
+                    locationId: trip['location_id'],
+                    se_tripId: trip['se_trip_id'],
+                  ),
             ),
           );
         },
@@ -165,7 +155,21 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
       ),
     ];
 
-    // Create extra content with cancelled date
+    // Thêm nút "Tạo lại" nếu bạn muốn duy trì chức năng này
+    /* 
+    actionButtons.insert(0, ElevatedButton(
+      onPressed: () => _recreateTrip(context, trip),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Color(MyColor.white),
+        foregroundColor: Color(MyColor.pr5),
+        side: BorderSide(color: Color(MyColor.pr5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: const Text('Tạo lại'),
+    ));
+    */
+
+    // Tạo nội dung bổ sung với ngày hủy
     final Widget extraContent = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -184,7 +188,7 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
       ),
     );
 
-    // Use TripDisplayCard component
+    // Sử dụng TripDisplayCard component
     return TripDisplayCard(
       trip: trip,
       statusText: 'Đã hủy',
@@ -195,33 +199,36 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
     );
   }
 
-  // Hàm tạo lại chuyến đi
+  // Giữ lại phương thức tạo lại chuyến đi nếu cần
   Future<void> _recreateTrip(
     BuildContext context,
     Map<String, dynamic> trip,
   ) async {
-    bool confirm = await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tạo lại chuyến đi'),
-        content: const Text('Bạn có muốn tạo lại chuyến đi này không?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Tạo lại'),
-          ),
-        ],
-      ),
-    ) ?? false;
+    bool confirm =
+        await showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Tạo lại chuyến đi'),
+                content: const Text('Bạn có muốn tạo lại chuyến đi này không?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Hủy'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Tạo lại'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
 
     if (!confirm) return;
 
     try {
-      // Show loading indicator
+      // Hiển thị loading
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -235,36 +242,38 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
         throw Exception("Người dùng chưa đăng nhập");
       }
 
-      // Lấy dữ liệu gốc từ chuyến đi đã hủy
+      // Lấy thông tin từ chuyến đi đã hủy
       final originalTripId = trip['trip_id'];
       final locationId = trip['location_id'];
       final seTripId = trip['se_trip_id'];
 
-      if (seTripId.isEmpty || originalTripId.isEmpty || locationId.isEmpty) {
+      if (originalTripId.isEmpty || locationId.isEmpty) {
         throw Exception("Thiếu thông tin cần thiết để tạo lại chuyến đi");
       }
 
-      // 1. Đọc dữ liệu từ selected_trip gốc nếu có
+      // Đọc dữ liệu từ selected_trip gốc
       DocumentSnapshot<Map<String, dynamic>>? originalSeTrip;
-      
+
       if (seTripId.isNotEmpty) {
-        originalSeTrip = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUserId)
-            .collection('selected_trips')
-            .doc(seTripId)
-            .get();
+        originalSeTrip =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(currentUserId)
+                .collection('selected_trips')
+                .doc(seTripId)
+                .get();
       }
 
-      // 2. Tạo selected_trip mới với trạng thái "đang áp dụng"
-      final newSeTripRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUserId)
-          .collection('selected_trips')
-          .doc(); // Tạo ID mới
+      // Tạo selected_trip mới với trạng thái "đang áp dụng"
+      final newSeTripRef =
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUserId)
+              .collection('selected_trips')
+              .doc(); // Tạo ID mới
 
       final now = Timestamp.now();
-      
+
       final baseData = {
         'trip_id': originalTripId,
         'location_id': locationId,
@@ -273,7 +282,7 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
         'created_at': now,
         'updated_at': now,
       };
-      
+
       // Kết hợp với dữ liệu gốc nếu có
       Map<String, dynamic> combinedData = {...baseData};
       if (originalSeTrip != null && originalSeTrip.exists) {
@@ -281,9 +290,15 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
         if (originalData != null) {
           // Lấy các trường hữu ích từ bản ghi gốc
           final fieldsToKeep = [
-            'so_act', 'so_eat', 'so_nguoi', 'chi_phi', 'noi_o', 'anh', 'so_ngay'
+            'so_act',
+            'so_eat',
+            'so_nguoi',
+            'chi_phi',
+            'noi_o',
+            'anh',
+            'so_ngay',
           ];
-          
+
           for (var field in fieldsToKeep) {
             if (originalData.containsKey(field)) {
               combinedData[field] = originalData[field];
@@ -291,20 +306,20 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
           }
         }
       }
-      
+
       // Ghi dữ liệu mới
       await newSeTripRef.set(combinedData);
-      
-      // 3. Sao chép timelines và schedule từ selected_trip gốc (nếu có) hoặc từ master
+
+      // Sao chép timelines và schedule từ selected_trip gốc (nếu có) hoặc từ master
       await _copyTimelinesAndSchedules(
-        currentUserId, 
-        locationId, 
-        originalTripId, 
-        seTripId, 
-        newSeTripRef.id
+        currentUserId,
+        locationId,
+        originalTripId,
+        seTripId,
+        newSeTripRef.id,
       );
 
-      // 4. Cập nhật user_trip
+      // Cập nhật user_trip
       await FirebaseFirestore.instance
           .collection('user_trip')
           .doc(trip['userTripDocId'])
@@ -314,7 +329,7 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
             'updated_at': now,
           });
 
-      // Close loading dialog
+      // Đóng dialog loading
       Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -325,31 +340,32 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => TimelinePage(
-            tripId: originalTripId,
-            locationId: locationId,
-            se_tripId: newSeTripRef.id,
-          ),
+          builder:
+              (context) => TimelinePage(
+                tripId: originalTripId,
+                locationId: locationId,
+                se_tripId: newSeTripRef.id,
+              ),
         ),
       );
     } catch (e) {
-      // Close loading dialog
+      // Đóng dialog loading
       Navigator.pop(context);
 
-      print('Error recreating trip: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e')),
-      );
+      print('Lỗi khi tạo lại chuyến đi: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
     }
   }
-  
+
   // Hàm hỗ trợ sao chép timelines và schedules
   Future<void> _copyTimelinesAndSchedules(
     String userId,
     String locationId,
     String tripId,
     String oldSeTripId,
-    String newSeTripId
+    String newSeTripId,
   ) async {
     try {
       // 1. Thử sao chép từ selected_trip cũ nếu có
@@ -359,40 +375,49 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
             .doc(userId)
             .collection('selected_trips')
             .doc(oldSeTripId);
-        
+
         final newSeTripRef = FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
             .collection('selected_trips')
             .doc(newSeTripId);
-            
-        final timelineSnapshot = await oldSeTripRef.collection('timelines').get();
-        
+
+        final timelineSnapshot =
+            await oldSeTripRef.collection('timelines').get();
+
         if (timelineSnapshot.docs.isNotEmpty) {
-          print('Sao chép ${timelineSnapshot.docs.length} timelines từ selected_trip cũ');
-          
+          print(
+            'Sao chép ${timelineSnapshot.docs.length} timelines từ selected_trip cũ',
+          );
+
           for (final timelineDoc in timelineSnapshot.docs) {
             // Sao chép timeline
-            final newTimelineRef = newSeTripRef.collection('timelines').doc(timelineDoc.id);
+            final newTimelineRef = newSeTripRef
+                .collection('timelines')
+                .doc(timelineDoc.id);
             await newTimelineRef.set({
               ...timelineDoc.data(),
-              'location_id': locationId
+              'location_id': locationId,
             });
-            
+
             // Sao chép schedule trong timeline
-            final scheduleSnapshot = await timelineDoc.reference.collection('schedule').get();
+            final scheduleSnapshot =
+                await timelineDoc.reference.collection('schedule').get();
             for (final scheduleDoc in scheduleSnapshot.docs) {
-              await newTimelineRef.collection('schedule').doc(scheduleDoc.id).set({
-                ...scheduleDoc.data(),
-                'location_id': locationId,
-                'status': false  // Reset trạng thái hoàn thành
-              });
+              await newTimelineRef
+                  .collection('schedule')
+                  .doc(scheduleDoc.id)
+                  .set({
+                    ...scheduleDoc.data(),
+                    'location_id': locationId,
+                    'status': false, // Reset trạng thái hoàn thành
+                  });
             }
           }
           return; // Đã sao chép thành công từ selected_trip cũ
         }
       }
-      
+
       // 2. Nếu không thể sao chép từ selected_trip cũ, sao chép từ master trip
       print('Sao chép dữ liệu từ master trip');
       final masterTripRef = FirebaseFirestore.instance
@@ -400,30 +425,34 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
           .doc(locationId)
           .collection('trips')
           .doc(tripId);
-          
+
       final newSeTripRef = FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .collection('selected_trips')
           .doc(newSeTripId);
-          
-      final timelineSnapshot = await masterTripRef.collection('timelines').get();
-      
+
+      final timelineSnapshot =
+          await masterTripRef.collection('timelines').get();
+
       for (final timelineDoc in timelineSnapshot.docs) {
         // Sao chép timeline
-        final newTimelineRef = newSeTripRef.collection('timelines').doc(timelineDoc.id);
+        final newTimelineRef = newSeTripRef
+            .collection('timelines')
+            .doc(timelineDoc.id);
         await newTimelineRef.set({
           ...timelineDoc.data(),
-          'location_id': locationId
+          'location_id': locationId,
         });
-        
+
         // Sao chép schedule trong timeline
-        final scheduleSnapshot = await timelineDoc.reference.collection('schedule').get();
+        final scheduleSnapshot =
+            await timelineDoc.reference.collection('schedule').get();
         for (final scheduleDoc in scheduleSnapshot.docs) {
           await newTimelineRef.collection('schedule').doc(scheduleDoc.id).set({
             ...scheduleDoc.data(),
             'location_id': locationId,
-            'status': false  // Đặt trạng thái ban đầu là chưa hoàn thành
+            'status': false, // Đặt trạng thái ban đầu là chưa hoàn thành
           });
         }
       }

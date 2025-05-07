@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/trip_review_widget.dart';
 import 'package:vizoo_frontend/pages/profile/pages/edit_reviews_screen.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/trip_reviews_card.dart';
-import '../widgets/trip_data_service.dart'; // Service cho dữ liệu trip
-import './other_reviews_screen.dart'; // Màn hình đánh giá của người dùng khác
+import '../widgets/trip_data_service.dart';
+import './other_reviews_screen.dart';
 
 class ReviewListView extends StatefulWidget {
-  const ReviewListView({super.key});
+  final String? se_tripID;
+  const ReviewListView({
+    this.se_tripID,
+    super.key});
 
   @override
   State<ReviewListView> createState() => _ReviewListViewState();
@@ -22,10 +24,22 @@ class _ReviewListViewState extends State<ReviewListView>
   final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
   final TripDataService _tripService = TripDataService();
 
+  // Cờ kiểm soát việc tải dữ liệu
+  bool _loadingMyReviews = false;
+  bool _loadingPendingReviews = false;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Lắng nghe sự kiện thay đổi tab để tải dữ liệu theo yêu cầu
+    _tabController.addListener(() {
+      // Chỉ tải dữ liệu khi tab thay đổi và hiển thị
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -94,6 +108,8 @@ class _ReviewListViewState extends State<ReviewListView>
   }
 
   Widget _buildMyReviewsTab() {
+    _tripService.clearCache();
+    // Sử dụng FutureBuilder để tải dữ liệu khi tab được hiển thị
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _tripService.getUserReviews(),
       builder: (context, snapshot) {
@@ -135,9 +151,9 @@ class _ReviewListViewState extends State<ReviewListView>
             final reviewId = reviewData['id'] as String;
             final tripId = reviewData['trip_id'] as String? ?? '';
 
-            // Hiển thị đánh giá qua widget TripReviewWidget, cho phép xem đánh giá khác
+            // Hiển thị đánh giá qua widget TripReviewWidget
             return TripReviewWidget(
-              tripId: tripId, 
+              tripId: tripId,
               reviewId: reviewId,
               showOtherReviews: true, // Cho phép xem đánh giá khác
             );
@@ -148,6 +164,8 @@ class _ReviewListViewState extends State<ReviewListView>
   }
 
   Widget _buildPendingReviewsTab() {
+    _tripService.clearCache();
+    // Tải danh sách chuyến đi cần đánh giá
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _tripService.getPendingReviews(),
       builder: (context, snapshot) {
@@ -197,9 +215,6 @@ class _ReviewListViewState extends State<ReviewListView>
     BuildContext context,
     Map<String, dynamic> trip,
   ) {
-    // Lấy đánh giá trung bình cho trip này
-    final averageRatingFuture = _tripService.getTripAverageRating(trip['trip_id']);
-
     // Nút thao tác
     final List<Widget> actionButtons = [
       ElevatedButton(
@@ -215,21 +230,18 @@ class _ReviewListViewState extends State<ReviewListView>
       ),
     ];
 
-    // FutureBuilder để hiển thị đánh giá trung bình
+    // Sử dụng FutureBuilder để tải đánh giá trung bình nếu cần
     return FutureBuilder<double>(
-      future: averageRatingFuture,
+      future: _tripService.getTripAverageRating(trip['trip_id']),
       builder: (context, ratingSnapshot) {
-        // Widget hiển thị thông tin về đánh giá trung bình
+        // Widget hiển thị thông tin đánh giá trung bình
         Widget ratingWidget = const SizedBox.shrink();
-        
+
         // Hiển thị đánh giá trung bình nếu có
-        if (ratingSnapshot.connectionState == ConnectionState.done && 
-            !ratingSnapshot.hasError && 
+        if (ratingSnapshot.connectionState == ConnectionState.done &&
+            !ratingSnapshot.hasError &&
             ratingSnapshot.data != null &&
             ratingSnapshot.data! > 0) {
-          // Debug log
-          print('Đánh giá trung bình cho trip ${trip['trip_id']}: ${ratingSnapshot.data}');
-          
           ratingWidget = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -257,11 +269,12 @@ class _ReviewListViewState extends State<ReviewListView>
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => OtherReviewsScreen(
-                        tripId: trip['trip_id'],
-                        locationName: trip['location'],
-                        tripDuration: trip['duration'],
-                      ),
+                      builder:
+                          (context) => OtherReviewsScreen(
+                            tripId: trip['trip_id'],
+                            locationName: trip['location'],
+                            tripDuration: trip['duration'],
+                          ),
                     ),
                   );
                 },
@@ -312,14 +325,15 @@ class _ReviewListViewState extends State<ReviewListView>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EditReviewScreen(
-          review: trip,
-          isNewReview: true,
-          userId: currentUserId,
-        ),
+        builder:
+            (context) => EditReviewScreen(
+              review: trip,
+              isNewReview: true,
+              userId: currentUserId,
+            ),
       ),
     ).then((_) {
-      setState(() {}); // Refresh the page after returning
+      setState(() {}); // Làm mới trang sau khi quay lại
     });
   }
 }
