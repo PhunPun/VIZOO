@@ -6,7 +6,28 @@ import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:weather_icons/weather_icons.dart';
 import '../Wearher_API/weather_API.dart';
 
-/// Hàm lấy dữ liệu thời tiết cho tất cả các trip trong 1 địa điểm
+
+
+
+/// Widget hiển thị danh sách thời tiết của 1 trip
+class WeatherCard extends StatefulWidget {
+  final String diaDiemId;
+  final String tripId;
+  final String? se_tripId;
+
+  const WeatherCard({
+    Key? key,
+    required this.diaDiemId,
+    required this.tripId,
+    this.se_tripId,
+  }) : super(key: key);
+
+  @override
+  State<WeatherCard> createState() => _WeatherCardState();
+}
+
+class _WeatherCardState extends State<WeatherCard> {
+  /// Hàm lấy dữ liệu thời tiết cho tất cả các trip trong 1 địa điểm
 Future<Map<String, List<Map<String, dynamic>>>> getWeatherForAllTripsInLocation(String diaDiemId) async {
   final diaDiemDoc = await FirebaseFirestore.instance
       .collection('dia_diem')
@@ -20,12 +41,25 @@ Future<Map<String, List<Map<String, dynamic>>>> getWeatherForAllTripsInLocation(
 
   final weatherData = await WeatherService.fetchWeather(cityName);
   final weatherMap = _groupWeatherDataByDate(weatherData['list']);
-
-  final tripsSnap = await FirebaseFirestore.instance
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null){
+    return{};
+  }
+  QuerySnapshot<Map<String, dynamic>> tripsSnap;
+  if(widget.se_tripId != null){
+    tripsSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('selected_trips')
+        .get();
+  }else{
+    tripsSnap = await FirebaseFirestore.instance
       .collection('dia_diem')
       .doc(diaDiemId)
       .collection('trips')
       .get();
+  }
+  
 
   final result = <String, List<Map<String, dynamic>>>{};
   final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -98,23 +132,14 @@ Map<String, Map<String, List>> _groupWeatherDataByDate(List<dynamic> list) {
   }
   return map;
 }
-
-
-/// Widget hiển thị danh sách thời tiết của 1 trip
-class WeatherCard extends StatelessWidget {
-  final String diaDiemId;
-  final String tripId;
-
-  const WeatherCard({
-    Key? key,
-    required this.diaDiemId,
-    required this.tripId,
-  }) : super(key: key);
-
   /// Gọi API và lấy thời tiết chỉ cho 1 trip
   Future<List<Map<String, dynamic>>> _getWeatherForTrip() async {
-    final allWeather = await getWeatherForAllTripsInLocation(diaDiemId);
-    return allWeather[tripId] ?? [];
+    final allWeather = await getWeatherForAllTripsInLocation(widget.diaDiemId);
+    if(widget.se_tripId != null){
+      return allWeather[widget.se_tripId] ?? [];
+    }else{
+      return allWeather[widget.tripId] ?? [];
+    }
   }
 
   @override
@@ -142,6 +167,7 @@ class WeatherCard extends StatelessWidget {
       },
     );
   }
+
   Widget _buildWeatherItem(DateTime date, int avgTemp) {
     IconData weatherIcon;
     if (avgTemp >= 28) {

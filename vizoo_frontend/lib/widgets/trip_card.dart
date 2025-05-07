@@ -303,7 +303,7 @@ void initState() {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildInfo("Nơi ở", widget.trip.noiO, isText: true),
-                    _buildInfo("Số ngày", widget.trip.soNgay),
+                    //_buildInfo("Số ngày", widget.trip.soNgay),
                     _buildInfo("Chi phí",
                         "${NumberFormat('#,###', 'vi_VN').format(widget.trip.chiPhi)}đ",
                         isText: true),

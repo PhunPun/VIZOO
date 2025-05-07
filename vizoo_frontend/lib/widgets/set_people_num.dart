@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:vizoo_frontend/pages/home/home_page.dart';
+import 'package:vizoo_frontend/pages/timeline/widgets/timeline_body.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../pages/timeline/timeline_page.dart';
-
 
 class SetPeopleNum extends StatefulWidget {
   final int peopleNum; // so nguoi
@@ -16,6 +17,7 @@ class SetPeopleNum extends StatefulWidget {
   final ValueChanged<int> onSetCost;
   final String diaDiemId;
   final String tripId;
+  final String? se_tripId;
   const SetPeopleNum({
     super.key,
     required this.peopleNum,
@@ -24,8 +26,8 @@ class SetPeopleNum extends StatefulWidget {
     required this.onSetCost,
     required this.diaDiemId,
     required this.tripId,
+    this.se_tripId,
   });
-
 
   @override
   State<SetPeopleNum> createState() => _SetPeopleNumState();
@@ -37,6 +39,7 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
   late DocumentReference userTripRef;
   bool _userTripExists = false;
   StreamSubscription<DocumentSnapshot>? _sub;
+  String se_tripId = "";
   @override
   @override
   void initState() {
@@ -45,14 +48,27 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
     cost = widget.cost;
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      userTripRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('selected_trips')
-          .doc(widget.tripId);
-      _initUserTrip();
+      if (widget.se_tripId != null) {
+        userTripRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('selected_trips')
+            .doc(widget.se_tripId);
+        se_tripId = userTripRef.id;
+        _initUserTrip();
+      } else {
+        userTripRef =
+            FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('selected_trips')
+                .doc();
+        se_tripId = userTripRef.id;
+        _initUserTrip();
+      }
     }
   }
+
   Future<void> _initUserTrip() async {
     final snap = await userTripRef.get();
     if (snap.exists) {
@@ -78,6 +94,7 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
       }
     });
   }
+
   @override
   void dispose() {
     _sub?.cancel();
@@ -86,10 +103,7 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
 
   /// cập nhật số người và chi phí lên bảng user
   Future<void> _updateUserTripPeopleAndCost() async {
-    await userTripRef.update({
-      'so_nguoi': peopleNum,
-      'chi_phi': cost,
-    });
+    await userTripRef.update({'so_nguoi': peopleNum, 'chi_phi': cost});
   }
 
   void _setCost() {
@@ -98,6 +112,7 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
       widget.onSetCost(cost);
     });
   }
+
   Future<void> _syncToFirestore() async {
     final updateData = {
       'so_nguoi': peopleNum,
@@ -122,22 +137,24 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
 
     final masterData = masterSnap.data()!;
     // Copy main trip doc with location_id
-    await userTripRef.set({
-      ...masterData,
-      'saved_at': FieldValue.serverTimestamp(),
-      'so_nguoi': peopleNum,
-      'chi_phi': cost,
-      'location_id': widget.diaDiemId,
-    }, SetOptions(merge: true));
+    if (widget.se_tripId != null) {
+      await userTripRef.update({'so_nguoi': peopleNum, 'chi_phi': cost});
+    } else {
+      await userTripRef.set({
+        ...masterData,
+        'trip_id': widget.tripId,
+        'saved_at': FieldValue.serverTimestamp(),
+        'so_nguoi': peopleNum,
+        'chi_phi': cost,
+        'location_id': widget.diaDiemId,
+      }, SetOptions(merge: true));
+    }
 
     // Copy timelines and include location_id
     final tlSnap = await masterRef.collection('timelines').get();
     for (var tl in tlSnap.docs) {
       final tlData = tl.data();
-      await userTripRef
-          .collection('timelines')
-          .doc(tl.id)
-          .set({
+      await userTripRef.collection('timelines').doc(tl.id).set({
         ...tlData,
         'location_id': widget.diaDiemId,
       }, SetOptions(merge: true));
@@ -152,9 +169,9 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
             .collection('schedule')
             .doc(sch.id)
             .set({
-          ...schData,
-          'location_id': widget.diaDiemId,
-        }, SetOptions(merge: true));
+              ...schData,
+              'location_id': widget.diaDiemId,
+            }, SetOptions(merge: true));
       }
     }
 
@@ -162,41 +179,43 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
       _userTripExists = true;
     });
 
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => TimelinePage(
-        tripId: widget.tripId,
-        locationId: widget.diaDiemId,
-      ),
-    ));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => HomePage(se_tripId: se_tripId)),
+    );
   }
-  void _incremetPeople(){
-    if(peopleNum < 50){
-      setState(() async {
+
+  void _incremetPeople() async {
+    if (peopleNum < 50) {
+      setState(() {
         peopleNum++;
         _setCost();
         widget.onSetPeople(peopleNum);
-        if (_userTripExists) {
-          await _updateUserTripPeopleAndCost();
-        } else {
-          await _addFullTripToUser();
-        }
       });
+
+      // Xử lý bất đồng bộ SAU khi update UI
+      if (_userTripExists) {
+        await _updateUserTripPeopleAndCost();
+      } else {
+        await _addFullTripToUser();
+      }
     }
   }
-  void _decrementPeople(){
-    if(peopleNum > 1){
-      setState(() async {
+
+  void _decrementPeople() async {
+    if (peopleNum > 1) {
+      setState(() {
         peopleNum--;
         _setCost();
         widget.onSetPeople(peopleNum);
-        if (_userTripExists) {
-          await _updateUserTripPeopleAndCost();
-        } else {
-          await _addFullTripToUser();
-        }
       });
+      if (_userTripExists) {
+        await _updateUserTripPeopleAndCost();
+      } else {
+        await _addFullTripToUser();
+      }
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -222,7 +241,7 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
                       'Số người',
                       style: TextStyle(
                         color: Color(MyColor.black),
-                        fontSize: 18
+                        fontSize: 18,
                       ),
                     ),
                   ],
@@ -238,7 +257,7 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
-                  )
+                  ),
                 ),
               ),
               Expanded(
@@ -250,33 +269,53 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
                     children: [
                       InkWell(
                         onTap: () {
-                          _incremetPeople();
+                          if (widget.se_tripId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Bạn cần \"Áp dụng chuyến đi\" để chỉnh sửa.',
+                                ),
+                              ),
+                            );
+                          } else {
+                            _incremetPeople();
+                          }
                         },
                         child: Text(
                           '+',
                           style: TextStyle(
                             color: Color(MyColor.pr4),
                             fontSize: 25,
-                            fontWeight: FontWeight.w500
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                       Text('|'),
                       InkWell(
                         onTap: () {
-                          _decrementPeople();
+                          if (widget.se_tripId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Bạn cần \"Áp dụng chuyến đi\" để chỉnh sửa.',
+                                ),
+                              ),
+                            );
+                          } else {
+                            _decrementPeople();
+                          }
                         },
                         child: Text(
                           '—',
                           style: TextStyle(
                             color: Color(MyColor.pr4),
                             fontSize: 20,
-                            fontWeight: FontWeight.w700
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                     ],
-                  )
+                  ),
                 ),
               ),
             ],
@@ -285,7 +324,7 @@ class _SetPeopleNumState extends State<SetPeopleNum> {
             height: 2,
             margin: EdgeInsets.only(left: 15),
             color: Color(MyColor.pr5),
-          )
+          ),
         ],
       ),
     );

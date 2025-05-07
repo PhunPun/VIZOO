@@ -16,6 +16,7 @@ class TimelineList extends StatefulWidget {
   final VoidCallback? onDataChanged;
   // Thêm callback khi trạng thái hoạt động thay đổi
   final VoidCallback? onActivityStatusChanged;
+  final String? se_tripId;
 
   const TimelineList({
     Key? key,
@@ -25,6 +26,7 @@ class TimelineList extends StatefulWidget {
     required this.tripId,
     this.onDataChanged,
     this.onActivityStatusChanged,
+    this.se_tripId,
   }) : super(key: key);
 
   @override
@@ -33,11 +35,14 @@ class TimelineList extends StatefulWidget {
 
 class _TimelineListState extends State<TimelineList> {
   late Future<List<Map<String, dynamic>>> _futureSchedules;
+  String? se_tripId;
 
   @override
   void initState() {
     super.initState();
     _futureSchedules = fetchSchedules();
+    fetchSchedules();
+    //print('aaaaaaaaa sch '+ widget.se_tripId!);
   }
 
   // phương thức để reload data
@@ -53,17 +58,68 @@ class _TimelineListState extends State<TimelineList> {
 
     // Nếu đã login, kiểm tra trip trong bảng user
     if (uid != null) {
-      final userTripRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('selected_trips')
-          .doc(widget.tripId);
+      DocumentReference<Map<String, dynamic>> userTripRef;
+
+      if (widget.se_tripId != null) {
+        userTripRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('selected_trips')
+            .doc(widget.se_tripId!);
+        setState(() {
+        se_tripId = userTripRef.id; // dùng để truyền cho TimelineCard
+      });
       final userSnap = await userTripRef.get();
       if (userSnap.exists) {
         timelineQuery = userTripRef
             .collection('timelines')
             .where('day_number', isEqualTo: widget.numberDay);
       }
+       }
+      // else {
+      //   final newRef =
+      //       FirebaseFirestore.instance
+      //           .collection('users')
+      //           .doc(uid)
+      //           .collection('selected_trips')
+      //           .doc(); // tự tạo ID mới
+      //   userTripRef = newRef;
+      //   final masterRef = FirebaseFirestore.instance
+      //       .collection('dia_diem')
+      //       .doc(widget.locationId)
+      //       .collection('trips')
+      //       .doc(widget.tripId);
+      //   final masterSnap = await masterRef.get();
+      //   if (masterSnap.exists) {
+      //     await userTripRef!.set({
+      //       ...masterSnap.data()!,
+      //       'saved_at': FieldValue.serverTimestamp(),
+      //       'location_id': widget.locationId,
+      //     }, SetOptions(merge: true));
+
+      //     // copy timelines + schedule
+      //     final tlSnap = await masterRef.collection('timelines').get();
+      //     for (var tl in tlSnap.docs) {
+      //       await userTripRef!.collection('timelines').doc(tl.id).set({
+      //         ...tl.data(),
+      //         'location_id': widget.locationId,
+      //       }, SetOptions(merge: true));
+      //       final schSnap = await tl.reference.collection('schedule').get();
+      //       for (var sch in schSnap.docs) {
+      //         await userTripRef!
+      //             .collection('timelines')
+      //             .doc(tl.id)
+      //             .collection('schedule')
+      //             .doc(sch.id)
+      //             .set({
+      //               ...sch.data(),
+      //               'location_id': widget.locationId,
+      //             }, SetOptions(merge: true));
+      //       }
+      //     }
+      //   }
+      // }
+      
     }
 
     // Lấy danh sách timeline docs (từ user )
@@ -74,22 +130,21 @@ class _TimelineListState extends State<TimelineList> {
       final timelineId = tDoc.id;
 
       // schedule
-      final schedSnap = await tDoc.reference
-          .collection('schedule')
-          .orderBy('hour')
-          .get();
+      final schedSnap =
+          await tDoc.reference.collection('schedule').orderBy('hour').get();
 
       for (var sDoc in schedSnap.docs) {
         final schedule = Schedule.fromSnapshots(tDoc, sDoc);
         final scheduleId = sDoc.id;
 
         // Hoạt động thì vẫn lấy từ master activities
-        final actSnap = await FirebaseFirestore.instance
-            .collection('dia_diem')
-            .doc(widget.locationId)
-            .collection('activities')
-            .doc(schedule.actId)
-            .get();
+        final actSnap =
+            await FirebaseFirestore.instance
+                .collection('dia_diem')
+                .doc(widget.locationId)
+                .collection('activities')
+                .doc(schedule.actId)
+                .get();
         final act = actSnap.data() ?? {};
 
         result.add({
@@ -104,10 +159,26 @@ class _TimelineListState extends State<TimelineList> {
           'categories': act['categories'] ?? '',
           'timelineId': timelineId,
           'scheduleId': scheduleId,
+          'act_id': schedule.actId,
+          'se_tripId': se_tripId,
         });
       }
     }
     return result;
+  }
+
+  Future<bool> checkSelectedTripExists(String seTripId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return false;
+
+    final userTripRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('selected_trips')
+        .doc(seTripId);
+
+    final snap = await userTripRef.get();
+    return snap.exists;
   }
 
   @override
@@ -132,46 +203,79 @@ class _TimelineListState extends State<TimelineList> {
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 13,
+                  ),
                   padding: const EdgeInsets.only(top: 10, bottom: 20),
                   decoration: BoxDecoration(
                     border: Border.all(color: const Color(MyColor.pr5)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
-                    children: items.map((i) {
-                      return TimelineCard(
-                        time: i['time'],
-                        activities: i['activities'],
-                        address: i['address'],
-                        price: i['price'],
-                        completed: i['completed'],
-                        categories: i['categories'],
-                        onTap: () async {
-                          final updated = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => EditTimelinePage(
-                                time: i['time'],
-                                activities: i['activities'],
-                                address: i['address'],
-                                price: i['price'],
-                                completed: i['completed'],
-                                categories: i['categories'],
-                                diaDiemId: widget.locationId,
-                                tripId: widget.tripId,
-                                timelineId: i['timelineId'],
-                                scheduleId: i['scheduleId'],
-                              ),
-                            ),
+                    children:
+                        items.map((i) {
+                          return TimelineCard(
+                            time: i['time'],
+                            activities: i['activities'],
+                            address: i['address'],
+                            price: i['price'],
+                            completed: i['completed'],
+                            categories: i['categories'],
+                            onTap: () async {
+                              if (widget.se_tripId == null ||
+                                  widget.se_tripId!.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Bạn cần \"Áp dụng chuyến đi\" để chỉnh sửa.',
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                final seTripId = i['se_tripId'];
+                                final exists =
+                                    seTripId != null &&
+                                    await checkSelectedTripExists(seTripId);
+
+                                if (!exists) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Dữ liệu không tông tại'),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                final updated = await Navigator.push<bool>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => EditTimelinePage(
+                                          time: i['time'],
+                                          activities: i['activities'],
+                                          address: i['address'],
+                                          price: i['price'],
+                                          completed: i['completed'],
+                                          categories: i['categories'],
+                                          diaDiemId: widget.locationId,
+                                          tripId: widget.tripId,
+                                          timelineId: i['timelineId'],
+                                          scheduleId: i['scheduleId'],
+                                          actId: i['act_id'],
+                                          se_tripId: seTripId,
+                                        ),
+                                  ),
+                                );
+
+                                if (updated == true) {
+                                  reload();
+                                  widget.onDataChanged?.call();
+                                }
+                              }
+                            },
                           );
-                          if (updated == true) {
-                            reload();
-                            widget.onDataChanged?.call(); // báo cho TimelineBody cập nhật TripCard
-                          }
-                        },
-                      );
-                    }).toList(),
+                        }).toList(), // ✅ thêm đoạn này
                   ),
                 ),
                 Positioned(
@@ -182,7 +286,13 @@ class _TimelineListState extends State<TimelineList> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(33),
-                      boxShadow: const [BoxShadow(color: Colors.white, blurRadius: 12, spreadRadius: 1)],
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.white,
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
                     child: Text(
                       'Day ${widget.numberDay}',
@@ -195,33 +305,155 @@ class _TimelineListState extends State<TimelineList> {
                   left: 0,
                   right: 0,
                   child: Center(
-                    child: GestureDetector(
+                    child: InkWell(
                       onTap: () async {
-                        final added = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AddSchedulePage(
-                              locationId: widget.locationId,
-                              tripId: widget.tripId,
-                              dayNumber: widget.numberDay,
+                        if (widget.se_tripId == null ||
+                            widget.se_tripId!.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Bạn cần \"Áp dụng chuyến đi\" để chỉnh sửa.',
+                              ),
                             ),
-                          ),
-                        );
-                        if (added == true) {
-                          reload();
-                          widget.onDataChanged?.call();
+                          );
+                        } else {
+                          try {
+                            print('🔘 [+] Nút thêm lịch ' + widget.se_tripId!);
+                            print('🔘 [+] Nút thêm lịch trình được nhấn');
+
+                            final timelineDocs =
+                                await widget.timelineQuery.get();
+                            print(
+                              '📄 Tổng số timeline docs: ${timelineDocs.docs.length}',
+                            );
+
+                            QueryDocumentSnapshot<Map<String, dynamic>>?
+                            timelineDoc;
+
+                            try {
+                              for (var doc in timelineDocs.docs) {
+                                print(
+                                  "✅ Timeline doc: ${doc.id}, day_number: ${doc.data()['day_number']}",
+                                );
+                              }
+                              timelineDoc = timelineDocs.docs.firstWhere((doc) {
+                                final dayRaw = doc.data()['day_number'];
+                                final day =
+                                    dayRaw is int
+                                        ? dayRaw
+                                        : int.tryParse(dayRaw.toString());
+                                print('🔍 Kiểm tra doc với day_number = $day');
+                                return day == widget.numberDay;
+                              });
+                            } catch (_) {
+                              timelineDoc = null;
+                            }
+                            late final String firstDoc;
+                            if (timelineDoc == null) {
+                              print(
+                                '❌ Không tìm thấy timeline phù hợp với day = ${widget.numberDay}',
+                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Không tìm thấy timeline cho ngày này',
+                                    ),
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+
+                            final timelineId = timelineDoc.id;
+                            print('✅ Tìm thấy timelineId = $timelineId');
+                            final snapshot =
+                                await FirebaseFirestore.instance
+                                    .collection('dia_diem')
+                                    .doc(widget.locationId)
+                                    .collection('activities')
+                                    .where('categories', isEqualTo: 'eat')
+                                    .limit(1)
+                                    .get();
+
+                            if (snapshot.docs.isNotEmpty) {
+                              firstDoc = snapshot.docs.first.id;
+                            }
+                            final scheduleRef =
+                                timelineDoc.reference
+                                    .collection('schedule')
+                                    .doc();
+                            await scheduleRef.set({
+                              'hour': '09:00',
+                              'act_id': firstDoc,
+                              'status': false,
+                            });
+                            print('✅ Tạo schedule mới: ${scheduleRef.id}');
+
+                            final updated = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => EditTimelinePage(
+                                      time: const TimeOfDay(hour: 9, minute: 0),
+                                      activities: '',
+                                      address: '',
+                                      price: 0,
+                                      completed: false,
+                                      categories: '',
+                                      diaDiemId: widget.locationId,
+                                      tripId: widget.tripId,
+                                      timelineId:
+                                          timelineId, // ✅ đã chắc chắn không null
+                                      scheduleId: scheduleRef.id,
+                                      actId: firstDoc ?? "",
+                                      se_tripId: se_tripId,
+                                    ),
+                              ),
+                            );
+                            if (updated == true) {
+                              reload();
+                              widget.onDataChanged?.call();
+                            }
+                          } catch (e, st) {
+                            print('❗ Lỗi khi thêm lịch trình: $e');
+                            print(st);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Lỗi khi thêm lịch trình: $e'),
+                                ),
+                              );
+                            }
+                          }
                         }
                       },
                       child: Container(
-                        width: 80,
-                        height: 30,
+                        width: 60,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          border: Border.all(color: Color(MyColor.pr5)),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(25),
+                          border: Border.all(
+                            color: Color(MyColor.pr4),
+                            width: 1.5,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.white,
+                              blurRadius: 12,
+                              spreadRadius: 1,
+                            ),
+                          ],
                         ),
-                        child: const Center(
-                          child: Icon(Icons.add, color: Color(MyColor.pr5), size: 16),
+                        child: const Text(
+                          "+",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(MyColor.pr5),
+                          ),
                         ),
                       ),
                     ),

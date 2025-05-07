@@ -6,7 +6,11 @@ import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/widgets/hearder.dart';
 
 class YourTripPage extends StatefulWidget {
-  const YourTripPage({super.key});
+  final String? se_tripId;
+  const YourTripPage({
+    super.key,
+    this.se_tripId,
+  });
 
   @override
   State<YourTripPage> createState() => _YourTripPageState();
@@ -14,12 +18,20 @@ class YourTripPage extends StatefulWidget {
 
 class _YourTripPageState extends State<YourTripPage> {
   late Future<QuerySnapshot<Map<String, dynamic>>> _futureTrips;
+  String? se_tripId;
 
   @override
   void initState() {
-    super.initState();
-    _futureTrips = _fetchOngoingTrips();
-  }
+  super.initState();
+  _futureTrips = _fetchOngoingTrips().then((snapshot) {
+    if (snapshot.docs.isNotEmpty) {
+      setState(() {
+        se_tripId = snapshot.docs.first.id;
+      });
+    }
+    return snapshot;
+  });
+}
 
   /// Gọi lại truy vấn chuyến đi đang tiến hành
   Future<QuerySnapshot<Map<String, dynamic>>> _fetchOngoingTrips() {
@@ -93,6 +105,7 @@ class _YourTripPageState extends State<YourTripPage> {
                     key: ValueKey(tripId), // ép rebuild nếu cần
                     tripId: tripId,
                     locationId: locationId,
+                    se_tripId: se_tripId,
                    // onDataChanged: _refreshTrips, // ✅ gọi lại nếu bên trong thay đổi
                   ),
                 );

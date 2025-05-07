@@ -9,6 +9,7 @@ class SetTime extends StatefulWidget {
   final String tripId;
   final String timelineId;
   final String scheduleId;
+  final String? se_tripId;
 
   const SetTime({
     super.key,
@@ -16,6 +17,7 @@ class SetTime extends StatefulWidget {
     required this.tripId,
     required this.timelineId,
     required this.scheduleId,
+    this.se_tripId,
   });
 
   @override
@@ -25,6 +27,7 @@ class SetTime extends StatefulWidget {
 
 class _SetTimeState extends State<SetTime> {
   TimeOfDay _selectedTime = const TimeOfDay(hour: 21, minute: 0);
+  String? se_tripId;
 
   @override
   void initState() {
@@ -46,8 +49,8 @@ class _SetTimeState extends State<SetTime> {
         .collection('users')
         .doc(uid)
         .collection('selected_trips')
-        .doc(widget.tripId);
-
+        .doc(widget.se_tripId);
+    se_tripId = userTripRef.id;
     final userTripSnap = await userTripRef.get();
     if (userTripSnap.exists) return;
 
@@ -97,7 +100,7 @@ class _SetTimeState extends State<SetTime> {
           .collection('users')
           .doc(uid)
           .collection('selected_trips')
-          .doc(widget.tripId)
+          .doc(se_tripId)
           .collection('timelines')
           .doc(widget.timelineId)
           .collection('schedule')
@@ -134,7 +137,7 @@ class _SetTimeState extends State<SetTime> {
         .collection('users')
         .doc(uid)
         .collection('selected_trips')
-        .doc(widget.tripId)
+        .doc(se_tripId)
         .collection('timelines')
         .doc(widget.timelineId)
         .collection('schedule')

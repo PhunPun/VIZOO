@@ -104,11 +104,14 @@ class TimelineCard extends StatelessWidget {
             ),
             SizedBox(width: 8),
             completed
-                ? SvgPicture.asset(
-              'assets/icons/done.svg',
-              width: 20,
-              height: 20,
-            )
+                ? Container(
+                  margin: EdgeInsets.only(right: 5),
+                  child: SvgPicture.asset(
+                                'assets/icons/done.svg',
+                                width: 15,
+                                height: 15,
+                              ),
+                )
                 : SizedBox.shrink(),
           ],
         ),

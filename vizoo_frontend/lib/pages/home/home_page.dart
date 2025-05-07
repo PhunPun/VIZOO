@@ -8,7 +8,11 @@ import 'package:vizoo_frontend/pages/profile/profile.dart';
 import 'package:vizoo_frontend/pages/your_trip/your_trip_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final String? se_tripId;
+  const HomePage({
+    super.key,
+    this.se_tripId,
+    });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -99,6 +103,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // Initialize scroll controllers for each page
     for (int i = 0; i < _pages.length; i++) {
       _scrollControllers[i] = ScrollController();
+    }
+    if(widget.se_tripId !=null){
+      _selectedIndex = 1;
     }
   }
 

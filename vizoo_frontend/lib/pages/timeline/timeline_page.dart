@@ -7,16 +7,23 @@ import 'package:vizoo_frontend/pages/timeline/widgets/timeline_body.dart';
 
 import '../../themes/colors/colors.dart';
 
-class TimelinePage extends StatelessWidget {
+class TimelinePage extends StatefulWidget {
   final String tripId;
   final String locationId;
+  final String? se_tripId;
 
   const TimelinePage({
     super.key,
     required this.tripId,
     required this.locationId,
+    this.se_tripId,
   });
 
+  @override
+  State<TimelinePage> createState() => _TimelinePageState();
+}
+
+class _TimelinePageState extends State<TimelinePage> {
   @override
 
   Widget build(BuildContext context) {
@@ -54,8 +61,9 @@ class TimelinePage extends StatelessWidget {
             children: [
               const SizedBox(height: 70,),
               TimelineBody(
-                tripId: tripId,
-                locationId: locationId,
+                tripId: widget.tripId,
+                locationId: widget.locationId,
+                se_tripId: widget.se_tripId,
               ),
             ],
           ),

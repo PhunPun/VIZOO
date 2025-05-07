@@ -8,12 +8,14 @@ class AddSchedulePage extends StatefulWidget {
   final String locationId;
   final String tripId;
   final int dayNumber;
+  final String? se_tripId;
 
   const AddSchedulePage({
     Key? key,
     required this.locationId,
     required this.tripId,
     required this.dayNumber,
+    this.se_tripId,
   }) : super(key: key);
 
   @override

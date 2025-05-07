@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:vizoo_frontend/pages/home/home_page.dart';
+import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/widgets/weather_card.dart';
 
@@ -12,6 +14,7 @@ class SetDayStart extends StatefulWidget {
   final ValueChanged<DateTime> onChangeDate;
   final String locationId;
   final String tripId;
+  final String? se_tripId;
 
   const SetDayStart({
     super.key,
@@ -20,6 +23,7 @@ class SetDayStart extends StatefulWidget {
     required this.onChangeDate,
     required this.locationId,
     required this.tripId,
+    this.se_tripId,
   });
 
   @override
@@ -28,24 +32,41 @@ class SetDayStart extends StatefulWidget {
 
 class _SetDayStartState extends State<SetDayStart> {
   late DateTime _selectedDate;
+  String se_tripId = "";
   DocumentReference<Map<String, dynamic>>? _userTripRef;
 
   @override
   void initState() {
     super.initState();
     _selectedDate = widget.dateStart;
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      _userTripRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('selected_trips')
-          .doc(widget.tripId)
-      as DocumentReference<Map<String, dynamic>>;
+      // nếu có sẵn tripId thì dùng luôn, không thì tạo mới
+      if (widget.se_tripId != null) {
+        _userTripRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('selected_trips')
+            .doc(widget.se_tripId);
+      } else {
+        final newDoc =
+            FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('selected_trips')
+                .doc();
+        _userTripRef = newDoc;
+      }
 
-      _loadStartDate();
+      // nếu đã có _userTripRef thì lấy id và gọi load
+      if (_userTripRef != null) {
+        se_tripId = _userTripRef!.id;
+        _loadStartDate();
+      }
     }
   }
+
   Future<void> _loadStartDate() async {
     if (_userTripRef == null) return;
     try {
@@ -61,6 +82,7 @@ class _SetDayStartState extends State<SetDayStart> {
       debugPrint('Lỗi khi load ngày bắt đầu: $e');
     }
   }
+
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
@@ -127,10 +149,7 @@ class _SetDayStartState extends State<SetDayStart> {
           // copy timelines + schedule
           final tlSnap = await masterRef.collection('timelines').get();
           for (var tl in tlSnap.docs) {
-            await _userTripRef!
-                .collection('timelines')
-                .doc(tl.id)
-                .set({
+            await _userTripRef!.collection('timelines').doc(tl.id).set({
               ...tl.data(),
               'location_id': widget.locationId,
             }, SetOptions(merge: true));
@@ -142,9 +161,9 @@ class _SetDayStartState extends State<SetDayStart> {
                   .collection('schedule')
                   .doc(sch.id)
                   .set({
-                ...sch.data(),
-                'location_id': widget.locationId,
-              }, SetOptions(merge: true));
+                    ...sch.data(),
+                    'location_id': widget.locationId,
+                  }, SetOptions(merge: true));
             }
           }
         }
@@ -154,6 +173,11 @@ class _SetDayStartState extends State<SetDayStart> {
         'ngay_bat_dau': Timestamp.fromDate(newDate),
         'location_id': widget.locationId,
       });
+      if (widget.se_tripId == null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => HomePage(se_tripId: se_tripId)),
+        );
+      }
     } catch (e) {
       debugPrint('Lỗi khi lưu hoặc cập nhật trip: \$e');
     }
@@ -194,7 +218,19 @@ class _SetDayStartState extends State<SetDayStart> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: InkWell(
-                    onTap: () => _selectDate(context),
+                    onTap: () {
+                      if (widget.se_tripId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Bạn cần \"Áp dụng chuyến đi\" để chỉnh sửa.',
+                            ),
+                          ),
+                        );
+                      } else {
+                        _selectDate(context);
+                      }
+                    },
                     child: Text(
                       DateFormat('dd/MM/yyyy').format(_selectedDate),
                       style: const TextStyle(
@@ -216,6 +252,7 @@ class _SetDayStartState extends State<SetDayStart> {
           WeatherCard(
             diaDiemId: widget.locationId,
             tripId: widget.tripId,
+            se_tripId: widget.se_tripId,
             //isFromUserTrip: true,
           ),
         ],
