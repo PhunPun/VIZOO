@@ -739,7 +739,7 @@ class _TimelineBodyState extends State<TimelineBody> {
               .doc(userId)
               .collection('selected_trips')
               .doc(); // mới
-        se_tripId = newTripRef.id;
+      se_tripId = newTripRef.id;
       // 3. Sao chép dữ liệu gốc
       await newTripRef.set({
         ...originalSnap.data()!,
@@ -787,9 +787,9 @@ class _TimelineBodyState extends State<TimelineBody> {
         userTripStatus = 0;
         allActivitiesCompleted = false;
       });
-        Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => HomePage(se_tripId: se_tripId)),
-    );
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => HomePage(se_tripId: se_tripId)),
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã thiết lập lại chuyến đi thành công!')),
       );
@@ -802,6 +802,7 @@ class _TimelineBodyState extends State<TimelineBody> {
     }
   }
 
+  // Hàm tạo mới user_trip khi người dùng áp dụng lần đầu
   // Hàm tạo mới user_trip khi người dùng áp dụng lần đầu
   Future<void> createNewUserTrip() async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
@@ -853,16 +854,6 @@ class _TimelineBodyState extends State<TimelineBody> {
         return;
       }
 
-      // Tạo mới bản ghi user_trip với trạng thái mặc định là đang áp dụng (0)
-      final docRef = await FirebaseFirestore.instance
-          .collection('user_trip')
-          .add({
-            'user_id': currentUserId,
-            'se_trip_id': widget.se_tripId,
-            'check': 0,
-            'created_at': now,
-            'updated_at': now,
-          });
       //Cập nhật user document trong selected_trips
       // Lấy dữ liệu gốc từ master trip
       if (widget.se_tripId == null || widget.se_tripId == "") {
@@ -873,6 +864,7 @@ class _TimelineBodyState extends State<TimelineBody> {
         await _userTripRef!.set({
           ...masterTripSnapshot.data()!,
           'location_id': widget.locationId, // Thêm locationID
+          'se_trip_id': widget.tripId,
           'status': true,
           'check': 0,
           'saved_at': FieldValue.serverTimestamp(),
@@ -916,6 +908,17 @@ class _TimelineBodyState extends State<TimelineBody> {
           'saved_at': FieldValue.serverTimestamp(),
         });
       }
+
+      // Tạo mới bản ghi user_trip với trạng thái mặc định là đang áp dụng (0)
+      final docRef = await FirebaseFirestore.instance
+          .collection('user_trip')
+          .add({
+            'user_id': currentUserId,
+            'se_trip_id': widget.tripId,
+            'check': 0,
+            'created_at': now,
+            'updated_at': now,
+          });
 
       // Ensure consistent status values in both collections
       await Future.wait([
