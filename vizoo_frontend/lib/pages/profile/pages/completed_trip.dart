@@ -6,7 +6,7 @@ import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 import 'package:vizoo_frontend/pages/profile/pages/edit_reviews_screen.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/trip_reviews_card.dart';
-import '../widgets/trip_data_service.dart'; // Import service mới
+import '../widgets/trip_data_service.dart';
 
 class CompletedTripsScreen extends StatelessWidget {
   const CompletedTripsScreen({super.key});
@@ -53,7 +53,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _completedTrips = [];
   String _errorMessage = '';
-  final TripDataService _tripService = TripDataService(); // Sử dụng service mới
+  final TripDataService _tripService = TripDataService();
   
   @override
   void initState() {
@@ -68,11 +68,21 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
     });
     
     try {
-      // Sử dụng service mới để lấy dữ liệu
+      // Sử dụng service đã cải tiến để lấy dữ liệu
       final trips = await _tripService.getUserTrips(tripStatus: 1);
       
+      // Đảm bảo cập nhật số lượng hoạt động và bữa ăn cho mỗi chuyến đi
+      for (var trip in trips) {
+        if (trip.containsKey('se_trip_id') && trip['se_trip_id'].toString().isNotEmpty) {
+          await _tripService.updateActivityAndMealCounts(trip['se_trip_id']);
+        }
+      }
+      
+      // Tải lại dữ liệu đã cập nhật
+      final updatedTrips = await _tripService.getUserTrips(tripStatus: 1);
+      
       setState(() {
-        _completedTrips = trips;
+        _completedTrips = updatedTrips;
         _isLoading = false;
       });
     } catch (e) {
@@ -157,6 +167,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
               builder: (context) => TimelinePage(
                 tripId: trip['trip_id'],
                 locationId: trip['location_id'],
+                se_tripId: trip['se_trip_id'],
               ),
             ),
           );

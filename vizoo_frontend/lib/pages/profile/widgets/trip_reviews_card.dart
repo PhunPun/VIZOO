@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 
@@ -53,6 +54,7 @@ class TripDisplayCard extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                       color: Colors.black,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Container(
@@ -87,6 +89,7 @@ class TripDisplayCard extends StatelessWidget {
                       (context) => TimelinePage(
                         tripId: trip['trip_id'],
                         locationId: trip['location_id'],
+                        se_tripId: trip['se_trip_id'],
                       ),
                 ),
               );
@@ -96,9 +99,7 @@ class TripDisplayCard extends StatelessWidget {
                 // Main image
                 Hero(
                   tag: 'trip_image_${trip['trip_id']}',
-                  child: ClipRRect(
-                    child: _buildImage(trip),
-                  ),
+                  child: ClipRRect(child: _buildImage(trip)),
                 ),
 
                 // Overlay with trip details
@@ -128,12 +129,17 @@ class TripDisplayCard extends StatelessWidget {
                               children: [
                                 Icon(Icons.bed, size: 16, color: Colors.white),
                                 const SizedBox(width: 4),
-                                Text(
-                                  trip['accommodation'] ?? 'Không xác định',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(maxWidth: 150),
+                                  child: Text(
+                                    trip['accommodation'] ?? 'Không xác định',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
                                 ),
                               ],
@@ -188,7 +194,7 @@ class TripDisplayCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${trip['price'] ?? 0}đ',
+                                  '${NumberFormat('#,###', 'vi_VN').format(trip['price'] ?? 0)}đ',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,
@@ -256,7 +262,7 @@ class TripDisplayCard extends StatelessWidget {
                   'Bữa ăn',
                   '${trip['meals']}',
                   'Chi phí',
-                  '${trip['price']}đ',
+                  '${NumberFormat('#,###', 'vi_VN').format(trip['price'] ?? 0)}đ',
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -306,33 +312,50 @@ class TripDisplayCard extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _buildDetailText(label1, value1),
-        _buildDetailText(label2, value2),
+        _buildDetailText(label2, value2, isLongText: true),
       ],
     );
   }
 
-  Widget _buildDetailText(String label, String value) {
+  Widget _buildDetailText(
+    String label,
+    String value, {
+    bool isLongText = false,
+  }) {
     return Row(
       children: [
         Text(
           '$label: ',
           style: const TextStyle(fontSize: 14, color: Colors.black87),
         ),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
+        isLongText
+            ? ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 120),
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            )
+            : Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
       ],
     );
   }
 
   Widget _buildImage(Map<String, dynamic> trip) {
     final String imageUrl = trip['imageUrl']?.toString() ?? '';
-    
+
     if (imageUrl.isEmpty) {
       return _buildDefaultImage();
     }
-    
+
     if (imageUrl.startsWith('http')) {
       return Image.network(
         imageUrl,
@@ -342,6 +365,23 @@ class TripDisplayCard extends StatelessWidget {
         errorBuilder: (context, error, stackTrace) {
           print('Lỗi tải ảnh network: $error');
           return _buildDefaultImage();
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            height: 150,
+            color: Colors.grey[200],
+            child: Center(
+              child: CircularProgressIndicator(
+                value:
+                    loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                valueColor: AlwaysStoppedAnimation<Color>(Color(MyColor.pr5)),
+              ),
+            ),
+          );
         },
       );
     } else if (imageUrl.startsWith('assets/')) {
