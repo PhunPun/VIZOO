@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/trip_reviews_card.dart';
+import '../widgets/trip_data_service.dart'; // Import service mới
 
 class CancelledTripsScreen extends StatelessWidget {
   const CancelledTripsScreen({super.key});
@@ -31,9 +32,7 @@ class CancelledTripsScreen extends StatelessWidget {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: SvgPicture.asset(
-              'assets/icons/logo.svg',
-            ),
+            child: SvgPicture.asset('assets/icons/logo.svg'),
           ),
         ],
       ),
@@ -53,6 +52,7 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _cancelledTrips = [];
   String _errorMessage = '';
+  final TripDataService _tripService = TripDataService(); // Sử dụng service mới
 
   @override
   void initState() {
@@ -67,7 +67,9 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
     });
 
     try {
-      final trips = await _fetchCancelledTrips();
+      // Sử dụng service mới để lấy dữ liệu
+      final trips = await _tripService.getUserTrips(tripStatus: 2);
+
       setState(() {
         _cancelledTrips = trips;
         _isLoading = false;
@@ -123,143 +125,10 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
     );
   }
 
-  Future<List<Map<String, dynamic>>> _fetchCancelledTrips() async {
-    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    if (currentUserId.isEmpty) return [];
-
-    try {
-      print('Fetching cancelled trips for user: $currentUserId');
-      
-      // Get all cancelled trips (check = 2) for current user
-      final userTripsSnapshot = await FirebaseFirestore.instance
-          .collection('user_trip')
-          .where('user_id', isEqualTo: currentUserId)
-          .where('check', isEqualTo: 2) // Cancelled
-          .orderBy('updated_at', descending: true)
-          .get();
-
-      print('Found ${userTripsSnapshot.docs.length} cancelled trips');
-
-      // Store results here
-      List<Map<String, dynamic>> cancelledTrips = [];
-      
-      // Get all locations in one query to improve performance
-      final locationsSnapshot = await FirebaseFirestore.instance
-          .collection('dia_diem')
-          .get();
-      
-      // Create a map of location data for faster lookup
-      Map<String, Map<String, dynamic>> locationsMap = {};
-      for (var doc in locationsSnapshot.docs) {
-        locationsMap[doc.id] = {...doc.data(), 'id': doc.id};
-      }
-
-      // Process each user trip
-      for (var userTripDoc in userTripsSnapshot.docs) {
-        final data = userTripDoc.data();
-        final String tripId = data['trip_id'] as String? ?? '';
-        if (tripId.isEmpty) continue;
-
-        print('Processing cancelled trip: $tripId');
-
-        // Extract locationId from tripId (format is usually locationId_tripInfo)
-        String locationId = '';
-        final parts = tripId.split('_');
-        if (parts.length > 1) {
-          locationId = parts[0];
-        }
-        
-        // If we couldn't extract a locationId, search through all locations
-        DocumentSnapshot? tripSnapshot;
-        if (locationId.isNotEmpty && locationsMap.containsKey(locationId)) {
-          tripSnapshot = await FirebaseFirestore.instance
-              .collection('dia_diem')
-              .doc(locationId)
-              .collection('trips')
-              .doc(tripId)
-              .get();
-        } else {
-          // If we can't determine the location, check all locations
-          for (var locId in locationsMap.keys) {
-            final tempSnapshot = await FirebaseFirestore.instance
-                .collection('dia_diem')
-                .doc(locId)
-                .collection('trips')
-                .doc(tripId)
-                .get();
-                
-            if (tempSnapshot.exists) {
-              tripSnapshot = tempSnapshot;
-              locationId = locId;
-              print('Found trip in location: $locationId');
-              break;
-            }
-          }
-        }
-        
-        // If we found the trip data
-        if (tripSnapshot != null && tripSnapshot.exists) {
-          final tripData = tripSnapshot.data() as Map<String, dynamic>? ?? {};
-          final locationData = locationsMap[locationId] ?? {};
-          
-          // Format cancellation date
-          String cancelledDate = 'Không xác định';
-          if (data.containsKey('updated_at') && data['updated_at'] is Timestamp) {
-            final timestamp = data['updated_at'] as Timestamp;
-            final date = timestamp.toDate();
-            cancelledDate = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-          }
-          
-          // Safely get trip day count
-          int soDays = 0;
-          if (tripData.containsKey('so_ngay')) {
-            if (tripData['so_ngay'] is int) {
-              soDays = tripData['so_ngay'] as int;
-            } else if (tripData['so_ngay'] is String) {
-              soDays = int.tryParse(tripData['so_ngay'] as String) ?? 0;
-            } else if (tripData['so_ngay'] != null) {
-              soDays = int.tryParse(tripData['so_ngay'].toString()) ?? 0;
-            }
-          }
-
-          // Safely get other properties
-          final activities = tripData['so_act'] is int ? tripData['so_act'] : int.tryParse(tripData['so_act']?.toString() ?? '0') ?? 0;
-          final meals = tripData['so_eat'] is int ? tripData['so_eat'] : int.tryParse(tripData['so_eat']?.toString() ?? '0') ?? 0;
-          final people = tripData['so_nguoi'] is int ? tripData['so_nguoi'] : int.tryParse(tripData['so_nguoi']?.toString() ?? '1') ?? 1;
-          final price = tripData['chi_phi'] is int ? tripData['chi_phi'] : int.tryParse(tripData['chi_phi']?.toString() ?? '0') ?? 0;
-          
-          // Create trip object
-          Map<String, dynamic> cancelledTrip = {
-            'trip_id': tripId,
-            'location_id': locationId,
-            'location': locationData['ten'] ?? 'Không xác định',
-            'duration': '$soDays ngày ${soDays > 1 ? (soDays - 1) : 0} đêm',
-            'activities': activities,
-            'meals': meals,
-            'people': people,
-            'accommodation': tripData['noi_o'] ?? 'Không xác định',
-            'price': price,
-            'imageUrl': locationData['hinh_anh1'] ?? tripData['anh'] ?? 'assets/images/vungtau.png',
-            'cancelled_date': cancelledDate,
-            'userTripDocId': userTripDoc.id,
-          };
-
-          cancelledTrips.add(cancelledTrip);
-          print('Added cancelled trip: ${locationData['ten']} $soDays ngày');
-        } else {
-          print('Trip not found: $tripId');
-        }
-      }
-
-      print('Total cancelled trips: ${cancelledTrips.length}');
-      return cancelledTrips;
-    } catch (e) {
-      print('Error fetching cancelled trips: $e');
-      throw Exception('Không thể tải chuyến đi đã hủy: $e');
-    }
-  }
-
-  Widget _buildCancelledTripCard(BuildContext context, Map<String, dynamic> trip) {
+  Widget _buildCancelledTripCard(
+    BuildContext context,
+    Map<String, dynamic> trip,
+  ) {
     // Create action buttons
     final List<Widget> actionButtons = [
       ElevatedButton(
@@ -271,9 +140,7 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
           backgroundColor: Color(MyColor.white),
           foregroundColor: Color(MyColor.pr5),
           side: BorderSide(color: Color(MyColor.pr5)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child: const Text('Tạo lại'),
       ),
@@ -281,21 +148,20 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
       ElevatedButton(
         onPressed: () {
           Navigator.push(
-            context, 
+            context,
             MaterialPageRoute(
-              builder: (context) => TimelinePage(
-                tripId: trip['trip_id'],
-                locationId: trip['location_id'],
-              ),
+              builder:
+                  (context) => TimelinePage(
+                    tripId: trip['trip_id'],
+                    locationId: trip['location_id'],
+                  ),
             ),
           );
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Color(MyColor.pr3),
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child: const Text('Xem chi tiết'),
       ),
@@ -332,24 +198,30 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
   }
 
   // Hàm tạo lại chuyến đi
-  Future<void> _recreateTrip(BuildContext context, Map<String, dynamic> trip) async {
-    bool confirm = await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tạo lại chuyến đi'),
-        content: const Text('Bạn có muốn tạo lại chuyến đi này không?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Tạo lại'),
-          ),
-        ],
-      ),
-    ) ?? false;
+  Future<void> _recreateTrip(
+    BuildContext context,
+    Map<String, dynamic> trip,
+  ) async {
+    bool confirm =
+        await showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Tạo lại chuyến đi'),
+                content: const Text('Bạn có muốn tạo lại chuyến đi này không?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Hủy'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Tạo lại'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
 
     if (!confirm) return;
 
@@ -359,9 +231,7 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         },
       );
 
@@ -385,20 +255,21 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => TimelinePage(
-            tripId: trip['trip_id'],
-            locationId: trip['location_id'],
-          ),
+          builder:
+              (context) => TimelinePage(
+                tripId: trip['trip_id'],
+                locationId: trip['location_id'],
+              ),
         ),
       );
     } catch (e) {
       // Close loading dialog
       Navigator.pop(context);
-      
+
       print('Error recreating trip: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
     }
   }
 }

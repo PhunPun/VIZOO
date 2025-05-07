@@ -201,7 +201,7 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
               : '',
       'rating': rating,
       'comment': comment,
-      'imageUrl': _locationData['hinh_anh1'] ?? 'assets/images/vungtau.png',
+      'imageUrl': _tripData['anh'] ?? _locationData['hinh_anh1'] ?? 'assets/images/vungtau.png',
       'accommodation': _tripData['noi_o'] ?? 'Không xác định',
       'price': _tripData['chi_phi'] ?? 0,
       'people': _tripData['so_nguoi'] ?? 1,
