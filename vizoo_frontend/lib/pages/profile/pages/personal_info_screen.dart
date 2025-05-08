@@ -312,14 +312,14 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Hủy'),
+            child: const Text('Hủy',style: TextStyle(color:Color(MyColor.pr4))),
           ),
           ElevatedButton(
             onPressed: () => _signOut(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(MyColor.pr5),
             ),
-            child: const Text('Đăng xuất'),
+            child: const Text('Đăng xuất', style: TextStyle(color: Colors.white),),
           ),
         ],
       ),
