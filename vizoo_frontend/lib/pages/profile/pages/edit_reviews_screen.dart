@@ -204,101 +204,98 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
   }
 
   Future<void> _saveReview() async {
-  if (selectedRating == 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Vui lòng chọn số sao đánh giá')),
-    );
-    return;
-  }
-
-  if (commentController.text.trim().isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Vui lòng nhập bình luận của bạn')),
-    );
-    return;
-  }
-
-  setState(() {
-    _isSaving = true;
-  });
-
-  try {
-    final userId =
-        widget.userId.isEmpty
-            ? FirebaseAuth.instance.currentUser?.uid
-            : widget.userId;
-
-    if (userId == null) {
-      throw Exception("User not logged in");
-    }
-
-    final String tripId = widget.review['trip_id'] ?? '';
-    final String locationId = widget.review['location_id'] ?? '';
-    final String seTripId = widget.review['se_trip_id'] ?? '';
-
-    if (tripId.isEmpty) {
-      throw Exception("Trip ID is missing");
-    }
-
-    // Thêm log để debug
-    print('Saving review with trip_id: $tripId, se_trip_id: $seTripId');
-
-    // Make sure we're using the correct IDs
-    final Map<String, dynamic> reviewData = {
-      'user_id': userId,
-      'trip_id': tripId,
-      'location_id': locationId,
-      'se_trip_id': seTripId, 
-      'comment': commentController.text.trim(),
-      'votes': selectedRating, 
-      'trip_details': {
-        'location': widget.review['location'] ?? 'Không xác định',
-        'duration': widget.review['duration'] ?? '',
-        'accommodation': widget.review['accommodation'] ?? 'Không xác định',
-        'price': widget.review['price'] ?? 0,
-        'people': widget.review['people'] ?? 1,
-        'activities': widget.review['activities'] ?? 0,
-        'meals': widget.review['meals'] ?? 0,
-        'imageUrl': widget.review['imageUrl'] ?? '',
-      },
-    };
-
-    if (widget.isNewReview) {
-      // Create new review with all necessary fields
-      reviewData['created_at'] = Timestamp.now();
-
-      await FirebaseFirestore.instance.collection('reviews').add(reviewData);
-
+    if (selectedRating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã thêm đánh giá thành công')),
+        const SnackBar(content: Text('Vui lòng chọn số sao đánh giá')),
       );
-    } else {
-      // Update existing review
-      reviewData['updated_at'] = Timestamp.now();
-
-      await FirebaseFirestore.instance
-          .collection('reviews')
-          .doc(widget.review['id'])
-          .update(reviewData);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã cập nhật đánh giá thành công')),
-      );
+      return;
     }
-    
-    // Return success
-    Navigator.pop(context, true);
-  } catch (e) {
-    print('Error saving review: $e');
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Đã xảy ra lỗi: $e')));
-  } finally {
+
+    if (commentController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập bình luận của bạn')),
+      );
+      return;
+    }
+
     setState(() {
-      _isSaving = false;
+      _isSaving = true;
     });
+
+    try {
+      final userId =
+          widget.userId.isEmpty
+              ? FirebaseAuth.instance.currentUser?.uid
+              : widget.userId;
+
+      if (userId == null) {
+        throw Exception("User not logged in");
+      }
+
+      final String tripId = widget.review['trip_id'] ?? '';
+      final String locationId = widget.review['location_id'] ?? '';
+      final String seTripId = widget.review['se_trip_id'] ?? '';
+
+      if (tripId.isEmpty) {
+        throw Exception("Trip ID is missing");
+      }
+
+      // Make sure we're using the correct IDs
+      final Map<String, dynamic> reviewData = {
+        'user_id': userId,
+        'trip_id': tripId,
+        'location_id': locationId,
+        'se_trip_id': seTripId,
+        'comment': commentController.text.trim(),
+        'votes': selectedRating,
+        'trip_details': {
+          'location': widget.review['location'] ?? 'Không xác định',
+          'duration': widget.review['duration'] ?? '',
+          'accommodation': widget.review['accommodation'] ?? 'Không xác định',
+          'price': widget.review['price'] ?? 0,
+          'people': widget.review['people'] ?? 1,
+          'activities': widget.review['activities'] ?? 0,
+          'meals': widget.review['meals'] ?? 0,
+          'imageUrl': widget.review['imageUrl'] ?? '',
+        },
+      };
+
+      if (widget.isNewReview) {
+        // Create new review with all necessary fields
+        reviewData['created_at'] = Timestamp.now();
+
+        await FirebaseFirestore.instance.collection('reviews').add(reviewData);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã thêm đánh giá thành công')),
+        );
+      } else {
+        // Update existing review
+        reviewData['updated_at'] = Timestamp.now();
+
+        await FirebaseFirestore.instance
+            .collection('reviews')
+            .doc(widget.review['id'])
+            .update(reviewData);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã cập nhật đánh giá thành công')),
+        );
+      }
+
+      // Return success
+      Navigator.pop(context, true);
+    } catch (e) {
+      print('Error saving review: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Đã xảy ra lỗi: $e')));
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
