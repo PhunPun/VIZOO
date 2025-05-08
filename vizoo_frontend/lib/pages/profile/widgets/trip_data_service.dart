@@ -298,13 +298,19 @@ class TripDataService {
     String tripId,
   ) async {
     try {
+      final seTripId = tripInfo['se_trip_id'] as String? ?? '';
+
+      // Tìm đánh giá dựa trên cả trip_id và se_trip_id
+      final reviewsQuery = _firestore
+          .collection('reviews')
+          .where('user_id', isEqualTo: userId)
+          .where('trip_id', isEqualTo: tripId);
+
+      // Thêm điều kiện se_trip_id nếu có
       final reviewsSnapshot =
-          await _firestore
-              .collection('reviews')
-              .where('user_id', isEqualTo: userId)
-              .where('trip_id', isEqualTo: tripId)
-              .limit(1)
-              .get();
+          await (seTripId.isNotEmpty
+              ? reviewsQuery.where('se_trip_id', isEqualTo: seTripId).get()
+              : reviewsQuery.get());
 
       if (reviewsSnapshot.docs.isNotEmpty) {
         final reviewDoc = reviewsSnapshot.docs.first;
@@ -439,28 +445,42 @@ class TripDataService {
       final completedTrips = await getUserTrips(tripStatus: 1);
       if (completedTrips.isEmpty) return [];
 
-      // 2. Lấy danh sách các trip_id đã được đánh giá - KHÔNG dùng cache
+      // 2. Lấy danh sách các trip đã được đánh giá - KHÔNG dùng cache
       final reviewsSnapshot =
           await _firestore
               .collection('reviews')
               .where('user_id', isEqualTo: currentUserId)
               .get();
 
-      final Set<String> reviewedTripIds =
-          reviewsSnapshot.docs
-              .map((doc) => doc.data()['trip_id'] as String? ?? '')
-              .where((id) => id.isNotEmpty)
-              .toSet();
+      // 3. Tạo set các cặp trip_id và se_trip_id đã đánh giá
+      final Set<String> reviewedTripKeys = {};
+
+      for (var doc in reviewsSnapshot.docs) {
+        final data = doc.data();
+        final tripId = data['trip_id'] as String? ?? '';
+        final seTripId = data['se_trip_id'] as String? ?? '';
+
+        if (tripId.isNotEmpty) {
+          // Tạo key dựa trên cả trip_id và se_trip_id
+          final reviewKey = '$tripId:$seTripId';
+          reviewedTripKeys.add(reviewKey);
+        }
+      }
 
       print(
-        'Đã tìm thấy ${reviewedTripIds.length} trip đã được đánh giá: $reviewedTripIds',
+        'Đã tìm thấy ${reviewedTripKeys.length} cặp trip_id và se_trip_id đã được đánh giá',
       );
 
-      // 3. Lọc ra các chuyến đi chưa được đánh giá
+      // 4. Lọc ra các chuyến đi chưa được đánh giá (dựa trên cả trip_id và se_trip_id)
       final List<Map<String, dynamic>> pendingReviews =
-          completedTrips
-              .where((trip) => !reviewedTripIds.contains(trip['trip_id']))
-              .toList();
+          completedTrips.where((trip) {
+            final tripId = trip['trip_id'] as String? ?? '';
+            final seTripId = trip['se_trip_id'] as String? ?? '';
+            final tripKey = '$tripId:$seTripId';
+
+            // Chỉ giữ lại các chuyến đi có cặp trip_id và se_trip_id chưa được đánh giá
+            return !reviewedTripKeys.contains(tripKey);
+          }).toList();
 
       print('Có ${pendingReviews.length} chuyến đi cần đánh giá');
       return pendingReviews;

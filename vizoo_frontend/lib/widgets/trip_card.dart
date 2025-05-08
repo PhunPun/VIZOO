@@ -381,7 +381,7 @@ class _TripCardState extends State<TripCard> {
                       child: Text(
                         '$_loveCount',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: _loved ? Color(MyColor.white) : Color(MyColor.black),
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           shadows: [

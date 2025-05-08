@@ -144,12 +144,12 @@ class _EditTimelinePageState extends State<EditTimelinePage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Hủy'),
+                child: const Text('Hủy', style: TextStyle(color: Color(MyColor.pr3)),),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                style: ElevatedButton.styleFrom(backgroundColor: Color(MyColor.pr5)),
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Xóa'),
+                child: const Text('Xóa',style: TextStyle(color: Color(MyColor.white)), ),
               ),
             ],
           ),

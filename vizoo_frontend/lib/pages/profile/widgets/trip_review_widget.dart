@@ -18,6 +18,7 @@ class TripReviewWidget extends StatefulWidget {
     required this.reviewId,
     this.showOtherReviews =
         false, // Mặc định không hiển thị nút xem đánh giá khác
+    
   });
 
   @override

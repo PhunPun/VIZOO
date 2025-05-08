@@ -40,6 +40,13 @@ class RouterCustum{
                 return const RegisterPage();
               },
             ),
+            GoRoute(
+              path: 'forgotPassword',
+              name: RouterName.forgotPassword,
+              builder: (BuildContext context, GoRouterState state) {
+                return const ForgotPasswordPage();
+              },
+            ),
           ]
         ),
       ],

@@ -93,46 +93,54 @@ class _TimelineBodyState extends State<TimelineBody> {
   }
 
   Future<void> _loadTripData() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final userTripSnapshot = await _userTripRef!.get();
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userTripSnapshot = await _userTripRef!.get();
 
-        if (userTripSnapshot.exists) {
-          if (!mounted) return;
-          setState(() {
-            _useUserData = true;
-            tripData = Trip.fromJson(
-              userTripSnapshot.data()!,
-              id: widget.tripId,
-              locationId: widget.locationId,
-            );
-            initDate = tripData!.ngayBatDau;
-            check = tripData!.check;
-          });
-          return;
-        }
-      }
-
-      // Chỉ load từ master nếu không có dữ liệu user
-      final snapMaster = await _masterTripRef.get();
-      if (snapMaster.exists) {
+      if (userTripSnapshot.exists) {
         if (!mounted) return;
+        
+        // Get the most recent accommodation if there are multiple
+        String accommodation = userTripSnapshot.data()!['noi_o'] ?? 'Không xác định';
+        
         setState(() {
-          _useUserData = false;
+          _useUserData = true;
           tripData = Trip.fromJson(
-            snapMaster.data()!,
+            userTripSnapshot.data()!,
             id: widget.tripId,
             locationId: widget.locationId,
           );
+          
+          // Make sure to update the accommodation with the most recent one
+          tripData = tripData!.copyWith(noiO: accommodation);
+          
           initDate = tripData!.ngayBatDau;
           check = tripData!.check;
         });
+        return;
       }
-    } catch (e) {
-      print('Lỗi khi lấy dữ liệu chuyến đi: $e');
     }
+
+    // Chỉ load từ master nếu không có dữ liệu user
+    final snapMaster = await _masterTripRef.get();
+    if (snapMaster.exists) {
+      if (!mounted) return;
+      setState(() {
+        _useUserData = false;
+        tripData = Trip.fromJson(
+          snapMaster.data()!,
+          id: widget.tripId,
+          locationId: widget.locationId,
+        );
+        initDate = tripData!.ngayBatDau;
+        check = tripData!.check;
+      });
+    }
+  } catch (e) {
+    print('Lỗi khi lấy dữ liệu chuyến đi: $e');
   }
+}
 
   @override
   void dispose() {
@@ -150,6 +158,7 @@ class _TimelineBodyState extends State<TimelineBody> {
       _fetchDayNumbers();
       _loadTripDetails();
       _loadUserTripStatus();
+      _loadActivityHotel();
     }
   }
 
@@ -908,8 +917,73 @@ class _TimelineBodyState extends State<TimelineBody> {
       _loadActivityCount(),
       _loadMealCount(),
       _loadTotalCost(),
+      _loadActivityHotel(),
     ]);
   }
+  Future<void> _loadActivityHotel() async {
+  if (!mounted) return;
+
+  final user = FirebaseAuth.instance.currentUser;
+  String hotelName = "chưa chonjjj";
+  String? latestHour;
+
+  if (user != null && widget.se_tripId != null) {
+    final timelines = await _baseTripRef.collection('timelines').get();
+
+    for (var tl in timelines.docs) {
+      final sch = await tl.reference.collection('schedule').get();
+
+      for (var doc in sch.docs) {
+        final actId = doc.data()['act_id'] as String?;
+        final hour = doc.data()['hour'] as String?;
+
+        if (actId == null || hour == null) continue;
+
+        final actDoc = await FirebaseFirestore.instance
+            .collection('dia_diem')
+            .doc(widget.locationId)
+            .collection('activities')
+            .doc(actId)
+            .get();
+
+        final actData = actDoc.data();
+        if (actData != null && actData['categories'] == 'hotel') {
+          if (latestHour == null || hour.compareTo(latestHour) > 0) {
+            hotelName = actData['name'] ?? "Chưa chọnpppp";
+              latestHour = hour;
+          }
+        }
+      }
+    }
+
+    // Cập nhật vào Firestore nếu tìm được khách sạn
+    if (latestHour != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('selected_trips')
+          .doc(widget.se_tripId)
+          .update({'noi_o': hotelName});
+    } else {
+      // Nếu không tìm thấy act hotel, lấy từ Firestore nếu có sẵn
+      final doc = await _userTripRef!.get();
+      final data = doc.data();
+      if (data != null && data['noi_o'] != null) {
+        hotelName = data['noi_o'];
+      }
+    }
+  } else {
+    final doc = await _masterTripRef.get();
+    final data = doc.data();
+    if (data != null && data['noi_o'] != null) {
+      hotelName = data['noi_o'];
+    }
+  }
+
+  setState(() => tripData = tripData?.copyWith(noiO: hotelName));
+}
+
+
 
   Future<void> _loadActivityCount() async {
     int count = 0;
@@ -1722,121 +1796,121 @@ class _TimelineBodyState extends State<TimelineBody> {
                 const SizedBox(height: 20),
 
                 // Nút bắt đầu/dừng hành trình chỉ hiển thị khi đang áp dụng
-                if (tripData?.status != null && userTripStatus == 0)
-                  ElevatedButton(
-                    onPressed:
-                        isLoading
-                            ? null
-                            : () async {
-                              try {
-                                final user = FirebaseAuth.instance.currentUser;
-                                if (user == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Vui lòng đăng nhập để thực hiện thao tác',
-                                      ),
-                                    ),
-                                  );
-                                  return;
-                                }
+                // if (tripData?.status != null && userTripStatus == 0)
+                //   ElevatedButton(
+                //     onPressed:
+                //         isLoading
+                //             ? null
+                //             : () async {
+                //               try {
+                //                 final user = FirebaseAuth.instance.currentUser;
+                //                 if (user == null) {
+                //                   ScaffoldMessenger.of(context).showSnackBar(
+                //                     const SnackBar(
+                //                       content: Text(
+                //                         'Vui lòng đăng nhập để thực hiện thao tác',
+                //                       ),
+                //                     ),
+                //                   );
+                //                   return;
+                //                 }
 
-                                final newStatus = !tripData!.status;
+                //                 final newStatus = !tripData!.status;
 
-                                // Cập nhật đồng thời cả 2 collection
-                                await FirebaseFirestore.instance.runTransaction((
-                                  transaction,
-                                ) async {
-                                  // 1. Cập nhật selected_trips
-                                  final selectedTripRef = FirebaseFirestore
-                                      .instance
-                                      .collection('users')
-                                      .doc(user.uid)
-                                      .collection('selected_trips')
-                                      .doc(widget.se_tripId);
+                //                 // Cập nhật đồng thời cả 2 collection
+                //                 await FirebaseFirestore.instance.runTransaction((
+                //                   transaction,
+                //                 ) async {
+                //                   // 1. Cập nhật selected_trips
+                //                   final selectedTripRef = FirebaseFirestore
+                //                       .instance
+                //                       .collection('users')
+                //                       .doc(user.uid)
+                //                       .collection('selected_trips')
+                //                       .doc(widget.se_tripId);
 
-                                  final selectedTripDoc = await transaction.get(
-                                    selectedTripRef,
-                                  );
-                                  if (!selectedTripDoc.exists)
-                                    throw Exception(
-                                      'Không tìm thấy selected_trip document',
-                                    );
+                //                   final selectedTripDoc = await transaction.get(
+                //                     selectedTripRef,
+                //                   );
+                //                   if (!selectedTripDoc.exists)
+                //                     throw Exception(
+                //                       'Không tìm thấy selected_trip document',
+                //                     );
 
-                                  transaction.update(selectedTripRef, {
-                                    //'status': newStatus,
-                                    'check': newStatus ? 0 : null,
-                                    'updated_at': FieldValue.serverTimestamp(),
-                                  });
+                //                   transaction.update(selectedTripRef, {
+                //                     //'status': newStatus,
+                //                     'check': newStatus ? 0 : null,
+                //                     'updated_at': FieldValue.serverTimestamp(),
+                //                   });
 
-                                  // // 2. Cập nhật user_trip
-                                  // final userTripRef = FirebaseFirestore
-                                  //     .instance
-                                  //     .collection('user_trip')
-                                  //     .doc(userTripDocId);
+                //                   // // 2. Cập nhật user_trip
+                //                   // final userTripRef = FirebaseFirestore
+                //                   //     .instance
+                //                   //     .collection('user_trip')
+                //                   //     .doc(userTripDocId);
 
-                                  // final userTripDoc = await transaction.get(
-                                  //   userTripRef,
-                                  // );
-                                  // if (!userTripDoc.exists)
-                                  //   throw Exception(
-                                  //     'Không tìm thấy user_trip document',
-                                  //   );
-                                  //
-                                  // transaction.update(userTripRef, {
-                                  //   'status': newStatus,
-                                  //   'updated_at':
-                                  //       FieldValue.serverTimestamp(),
-                                  // });
-                                });
+                //                   // final userTripDoc = await transaction.get(
+                //                   //   userTripRef,
+                //                   // );
+                //                   // if (!userTripDoc.exists)
+                //                   //   throw Exception(
+                //                   //     'Không tìm thấy user_trip document',
+                //                   //   );
+                //                   //
+                //                   // transaction.update(userTripRef, {
+                //                   //   'status': newStatus,
+                //                   //   'updated_at':
+                //                   //       FieldValue.serverTimestamp(),
+                //                   // });
+                //                 });
 
-                                // Cập nhật state và reload dữ liệu
-                                setState(() {
-                                  tripData = tripData!.copyWith(
-                                    status: newStatus,
-                                  );
-                                });
-                                await _loadTripData();
+                //                 // Cập nhật state và reload dữ liệu
+                //                 setState(() {
+                //                   tripData = tripData!.copyWith(
+                //                     status: newStatus,
+                //                   );
+                //                 });
+                //                 await _loadTripData();
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      newStatus
-                                          ? 'Đã bắt đầu hành trình'
-                                          : 'Đã tạm dừng hành trình',
-                                    ),
-                                  ),
-                                );
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Lỗi khi cập nhật: ${e.toString()}',
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(MyColor.pr4),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 14,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      check == null ? 'Bắt đầu hành trình' : 'Dừng hành trình',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                //                 ScaffoldMessenger.of(context).showSnackBar(
+                //                   SnackBar(
+                //                     content: Text(
+                //                       newStatus
+                //                           ? 'Đã bắt đầu hành trình'
+                //                           : 'Đã tạm dừng hành trình',
+                //                     ),
+                //                   ),
+                //                 );
+                //               } catch (e) {
+                //                 ScaffoldMessenger.of(context).showSnackBar(
+                //                   SnackBar(
+                //                     content: Text(
+                //                       'Lỗi khi cập nhật: ${e.toString()}',
+                //                     ),
+                //                   ),
+                //                 );
+                //               }
+                //             },
+                //     style: ElevatedButton.styleFrom(
+                //       backgroundColor: Color(MyColor.pr4),
+                //       foregroundColor: Colors.white,
+                //       padding: const EdgeInsets.symmetric(
+                //         horizontal: 32,
+                //         vertical: 14,
+                //       ),
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(12),
+                //       ),
+                //     ),
+                //     child: Text(
+                //       check == null ? 'Bắt đầu hành trình' : 'Dừng hành trình',
+                //       style: const TextStyle(
+                //         color: Colors.white,
+                //         fontSize: 16,
+                //         fontWeight: FontWeight.w500,
+                //       ),
+                //     ),
+                //   ),
               ],
             ),
           ),
