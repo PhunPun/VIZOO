@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/pages/timeline/timeline_page.dart';
 import 'package:vizoo_frontend/pages/profile/pages/edit_reviews_screen.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/trip_reviews_card.dart';
-import '../widgets/trip_data_service.dart'; // Import service mới
+import '../widgets/trip_data_service.dart';
 
 class CompletedTripsScreen extends StatelessWidget {
   const CompletedTripsScreen({super.key});
@@ -53,7 +52,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _completedTrips = [];
   String _errorMessage = '';
-  final TripDataService _tripService = TripDataService(); // Sử dụng service mới
+  final TripDataService _tripService = TripDataService();
   
   @override
   void initState() {
@@ -68,7 +67,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
     });
     
     try {
-      // Sử dụng service mới để lấy dữ liệu
+      // Sử dụng service đã tối ưu để lấy dữ liệu trực tiếp từ user_trip và selected_trips
       final trips = await _tripService.getUserTrips(tripStatus: 1);
       
       setState(() {
@@ -130,7 +129,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
     BuildContext context,
     Map<String, dynamic> trip,
   ) {
-    // Create action buttons
+    // Tạo nút hành động
     final List<Widget> actionButtons = [
       ElevatedButton(
         onPressed: () {
@@ -157,6 +156,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
               builder: (context) => TimelinePage(
                 tripId: trip['trip_id'],
                 locationId: trip['location_id'],
+                se_tripId: trip['se_trip_id'],
               ),
             ),
           );
@@ -172,11 +172,11 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
       ),
     ];
 
-    // Create extra content for rating and completion date
+    // Tạo widget nội dung bổ sung với ngày hoàn thành và đánh giá
     Widget extraContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Always show completion date
+        // Luôn hiển thị ngày hoàn thành
         Padding(
           padding: const EdgeInsets.only(bottom: 8.0),
           child: Row(
@@ -195,7 +195,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
           ),
         ),
         
-        // Show rating if it exists
+        // Hiển thị đánh giá nếu có
         if (trip['rating'] > 0) ...[
           Row(
             children: [
@@ -231,7 +231,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
       ],
     );
 
-    // Use TripDisplayCard component
+    // Sử dụng TripDisplayCard component
     return TripDisplayCard(
       trip: trip,
       statusText: 'Hoàn thành',
@@ -243,9 +243,11 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
   }
 
   void _navigateToReview(BuildContext context, Map<String, dynamic> trip) {
+    // Xây dựng dữ liệu cho trang đánh giá
     final reviewData = {
       'trip_id': trip['trip_id'],
       'location_id': trip['location_id'],
+      'se_trip_id': trip['se_trip_id'],
       'location': trip['location'],
       'duration': trip['duration'],
       'rating': 0,
@@ -258,6 +260,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
       'meals': trip['meals'],
     };
 
+    // Điều hướng đến trang đánh giá
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -268,7 +271,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
         ),
       ),
     ).then((result) {
-      // Refresh when returning
+      // Làm mới danh sách khi quay lại
       if (result == true) {
         _loadCompletedTrips();
       }
@@ -276,10 +279,12 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
   }
 
   void _navigateToEditReview(BuildContext context, Map<String, dynamic> trip) {
+    // Xây dựng dữ liệu cho trang chỉnh sửa đánh giá
     final reviewData = {
       'id': trip['review_id'],
       'trip_id': trip['trip_id'],
       'location_id': trip['location_id'],
+      'se_trip_id': trip['se_trip_id'],
       'location': trip['location'],
       'duration': trip['duration'],
       'rating': trip['rating'],
@@ -292,6 +297,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
       'meals': trip['meals'],
     };
 
+    // Điều hướng đến trang chỉnh sửa đánh giá
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -302,7 +308,7 @@ class _CompletedTripsListState extends State<CompletedTripsList> {
         ),
       ),
     ).then((result) {
-      // Refresh when returning
+      // Làm mới danh sách khi quay lại
       if (result == true) {
         _loadCompletedTrips();
       }

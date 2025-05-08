@@ -43,6 +43,7 @@ class _TimelineBodyState extends State<TimelineBody> {
   // Lưu trạng thái chuyến đi của người dùng hiện tại (0: đang áp dụng, 1: hoàn thành, 2: đã hủy)
   int? userTripStatus;
   String? userTripDocId;
+  int? check;
 
   // Kiểm tra tất cả các mốc thời gian đã hoàn thành chưa
   bool allActivitiesCompleted = false;
@@ -107,6 +108,7 @@ class _TimelineBodyState extends State<TimelineBody> {
               locationId: widget.locationId,
             );
             initDate = tripData!.ngayBatDau;
+            check = tripData!.check;
           });
           return;
         }
@@ -124,6 +126,7 @@ class _TimelineBodyState extends State<TimelineBody> {
             locationId: widget.locationId,
           );
           initDate = tripData!.ngayBatDau;
+          check = tripData!.check;
         });
       }
     } catch (e) {
@@ -175,125 +178,253 @@ class _TimelineBodyState extends State<TimelineBody> {
 
     // Kiểm tra các điều kiện logic
     // Không cho phép quay lại trạng thái "áp dụng" nếu đã hoàn thành
-    if (userTripStatus == 1 && newStatus == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Không thể quay lại trạng thái đang áp dụng sau khi đã hoàn thành.'
-            ' Vui lòng sử dụng "Áp dụng lại" để bắt đầu mới.',
-          ),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-
-    // Kiểm tra các điều kiện trước khi cập nhật trạng thái
-    if (newStatus == 1 && !allActivitiesCompleted) {
-      // Nếu muốn hoàn thành chuyến đi nhưng chưa hoàn thành tất cả hoạt động
-      showDialog(
-        context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text('Chưa hoàn thành'),
-              content: const Text(
-                'Bạn cần hoàn thành tất cả các hoạt động trong lịch trình trước khi đánh dấu chuyến đi là hoàn thành.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Đã hiểu'),
-                ),
-              ],
+    if (widget.se_tripId == null) {
+      if (userTripStatus == 1 && newStatus == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Không thể quay lại trạng thái đang áp dụng sau khi đã hoàn thành.'
+              ' Vui lòng sử dụng "Áp dụng lại" để bắt đầu mới.',
             ),
-      );
-      return;
-    }
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
 
-    setState(() {
-      isLoading = true;
-    });
+      // Kiểm tra các điều kiện trước khi cập nhật trạng thái
+      if (newStatus == 1 && !allActivitiesCompleted) {
+        // Nếu muốn hoàn thành chuyến đi nhưng chưa hoàn thành tất cả hoạt động
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Chưa hoàn thành'),
+                content: const Text(
+                  'Bạn cần hoàn thành tất cả các hoạt động trong lịch trình trước khi đánh dấu chuyến đi là hoàn thành.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Đã hiểu'),
+                  ),
+                ],
+              ),
+        );
+        return;
+      }
 
-    try {
-      final Timestamp now = Timestamp.now();
-      final usersCol = FirebaseFirestore.instance.collection('users');
+      setState(() {
+        isLoading = true;
+      });
 
-      // Cập nhật dữ liệu chung cho cả 2 trường hợp
-      final updateData = {
-        'check': newStatus,
-        'updated_at': now,
-        'status': newStatus == 0, // status = true chỉ khi đang áp dụng (0)
-      };
+      try {
+        final Timestamp now = Timestamp.now();
+        final usersCol = FirebaseFirestore.instance.collection('users');
 
-      if (userTripDocId != null) {
-        // Cập nhật user_trip và selected_trips đồng thời
-        await Future.wait([
-          FirebaseFirestore.instance
+        // Cập nhật dữ liệu chung cho cả 2 trường hợp
+        final updateData = {
+          'check': newStatus,
+          'trip_id': widget.se_tripId,
+          'updated_at': now,
+          'status': newStatus == 0, // status = true chỉ khi đang áp dụng (0)
+        };
+
+        if (userTripDocId != null) {
+          // Cập nhật user_trip và selected_trips đồng thời
+          await Future.wait([
+            FirebaseFirestore.instance
+                .collection('user_trip')
+                .doc(userTripDocId)
+                .update(updateData),
+
+            usersCol
+                .doc(currentUserId)
+                .collection('selected_trips')
+                .doc(widget.se_tripId)
+                .set(updateData, SetOptions(merge: true)),
+          ]);
+        } else {
+          // Tạo mới và đồng bộ dữ liệu
+          final docRef = await FirebaseFirestore.instance
               .collection('user_trip')
-              .doc(userTripDocId)
-              .update(updateData),
+              .add({
+                'user_id': currentUserId,
+                'se_trip_id': widget.se_tripId,
+                ...updateData,
+                'created_at': now,
+              });
 
-          usersCol
+          await usersCol
               .doc(currentUserId)
               .collection('selected_trips')
-              .doc()
-              .set(updateData, SetOptions(merge: true)),
-        ]);
-      } else {
-        // Tạo mới và đồng bộ dữ liệu
-        final docRef = await FirebaseFirestore.instance
-            .collection('user_trip')
-            .add({
-              'user_id': currentUserId,
-              'trip_id': widget.tripId,
-              ...updateData,
-              'created_at': now,
-            });
+              .doc(widget.se_tripId)
+              .update({'check': newStatus, 'status': newStatus = 0});
 
-        await usersCol
-            .doc(currentUserId)
-            .collection('selected_trips')
-            .doc(widget.tripId)
-            .set(updateData, SetOptions(merge: true));
+          setState(() => userTripDocId = docRef.id);
+        }
 
-        setState(() => userTripDocId = docRef.id);
+        setState(() => userTripStatus = newStatus);
+
+        String statusText = '';
+        switch (newStatus) {
+          case 0:
+            statusText = 'đang áp dụng';
+            break;
+          case 1:
+            statusText = 'đã hoàn thành';
+            break;
+          case 2:
+            statusText = 'đã hủy';
+            break;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chuyến đi đã được cập nhật thành $statusText'),
+          ),
+        );
+
+        // Nếu đã hoàn thành (1), yêu cầu đánh giá
+        if (newStatus == 1) {
+          await _navigateToReview(newStatus);
+          // Cập nhật lại trạng thái đánh giá
+          await checkIfReviewed();
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi cập nhật trạng thái: $e')),
+        );
+      } finally {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } else {
+      if (userTripStatus == 1 && newStatus == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Không thể quay lại trạng thái đang áp dụng sau khi đã hoàn thành.'
+              ' Vui lòng sử dụng "Áp dụng lại" để bắt đầu mới.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
       }
 
-      setState(() => userTripStatus = newStatus);
-
-      String statusText = '';
-      switch (newStatus) {
-        case 0:
-          statusText = 'đang áp dụng';
-          break;
-        case 1:
-          statusText = 'đã hoàn thành';
-          break;
-        case 2:
-          statusText = 'đã hủy';
-          break;
+      // Kiểm tra các điều kiện trước khi cập nhật trạng thái
+      if (newStatus == 1 && !allActivitiesCompleted) {
+        // Nếu muốn hoàn thành chuyến đi nhưng chưa hoàn thành tất cả hoạt động
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Chưa hoàn thành'),
+                content: const Text(
+                  'Bạn cần hoàn thành tất cả các hoạt động trong lịch trình trước khi đánh dấu chuyến đi là hoàn thành.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Đã hiểu'),
+                  ),
+                ],
+              ),
+        );
+        return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Chuyến đi đã được cập nhật thành $statusText')),
-      );
-
-      // Nếu đã hoàn thành (1), yêu cầu đánh giá
-      if (newStatus == 1) {
-        await _navigateToReview(newStatus);
-        // Cập nhật lại trạng thái đánh giá
-        await checkIfReviewed();
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi cập nhật trạng thái: $e')),
-      );
-    } finally {
       setState(() {
-        isLoading = false;
+        isLoading = true;
       });
+
+      try {
+        final Timestamp now = Timestamp.now();
+        final usersCol = FirebaseFirestore.instance.collection('users');
+
+        // Cập nhật dữ liệu chung cho cả 2 trường hợp
+        final updateData = {
+          'check': newStatus,
+          'updated_at': now,
+          'status': newStatus == 0, // status = true chỉ khi đang áp dụng (0)
+        };
+
+        if (userTripDocId != null) {
+          // Cập nhật user_trip và selected_trips đồng thời
+          await Future.wait([
+            FirebaseFirestore.instance
+                .collection('user_trip')
+                .doc(userTripDocId)
+                .update(updateData),
+
+            usersCol
+                .doc(currentUserId)
+                .collection('selected_trips')
+                .doc(widget.se_tripId)
+                .set(updateData, SetOptions(merge: true)),
+          ]);
+        } else {
+          // Tạo mới và đồng bộ dữ liệu
+          final docRef = await FirebaseFirestore.instance
+              .collection('user_trip')
+              .add({
+                'user_id': currentUserId,
+                'se_trip_id': widget.se_tripId,
+                ...updateData,
+                'created_at': now,
+              });
+
+          await usersCol
+              .doc(currentUserId)
+              .collection('selected_trips')
+              .doc(widget.se_tripId)
+              .update({'check': newStatus, 'status': newStatus = 0});
+
+          setState(() => userTripDocId = docRef.id);
+        }
+
+        setState(() => userTripStatus = newStatus);
+
+        String statusText = '';
+        switch (newStatus) {
+          case 0:
+            statusText = 'đang áp dụng';
+            break;
+          case 1:
+            statusText = 'đã hoàn thành';
+            break;
+          case 2:
+            statusText = 'đã hủy';
+            break;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chuyến đi đã được cập nhật thành $statusText'),
+          ),
+        );
+
+        // Nếu đã hoàn thành (1), yêu cầu đánh giá
+        if (newStatus == 1) {
+          await _navigateToReview(newStatus);
+          // Cập nhật lại trạng thái đánh giá
+          await checkIfReviewed();
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi cập nhật trạng thái: $e')),
+        );
+      } finally {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -301,13 +432,10 @@ class _TimelineBodyState extends State<TimelineBody> {
   void _navigateToReviewScreen() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ReviewListView()),
-    ).then((_) {
-      // Refresh data when returning from review screen
-      setState(() {
-        _initDataFuture = _initializeData();
-      });
-    });
+      MaterialPageRoute(
+        builder: (context) => ReviewListView(se_tripID: se_tripId),
+      ),
+    );
   }
 
   Future<void> _initializeData() async {
@@ -322,50 +450,51 @@ class _TimelineBodyState extends State<TimelineBody> {
   Future<void> _loadUserTripStatus() async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
+    if (widget.se_tripId != null) {
+      try {
+        final userTripQuery =
+            await FirebaseFirestore.instance
+                .collection('user_trip')
+                .where('user_id', isEqualTo: currentUserId)
+                .where('se_trip_id', isEqualTo: widget.se_tripId)
+                .limit(1)
+                .get();
 
-    try {
-      final userTripQuery =
-          await FirebaseFirestore.instance
-              .collection('user_trip')
-              .where('user_id', isEqualTo: currentUserId)
-              .where('trip_id', isEqualTo: widget.tripId)
-              .limit(1)
-              .get();
-
-      if (userTripQuery.docs.isNotEmpty) {
-        final userTripDoc = userTripQuery.docs.first;
-        setState(() {
-          userTripDocId = userTripDoc.id;
-          userTripStatus = userTripDoc.data()['check'] as int? ?? 0;
-          _useUserData = true;
-        });
-        print(
-          'Found user trip with status: $userTripStatus, docId: $userTripDocId',
-        );
-        return;
-      }
-
-      // If not found in user_trip, check selected_trips
-      if (currentUserId != null) {
-        final selectedTripRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUserId)
-            .collection('selected_trips')
-            .doc(widget.se_tripId);
-
-        final selectedTripSnap = await selectedTripRef.get();
-
-        if (selectedTripSnap.exists) {
-          final checkValue = selectedTripSnap.data()?['check'] as int?;
+        if (userTripQuery.docs.isNotEmpty) {
+          final userTripDoc = userTripQuery.docs.first;
           setState(() {
-            userTripStatus = checkValue;
+            userTripDocId = userTripDoc.id;
+            userTripStatus = userTripDoc.data()['check'] as int? ?? 0;
             _useUserData = true;
           });
-          print('Found selected trip with status: $userTripStatus');
+          print(
+            'Found user trip with status: $userTripStatus, docId: $widget.se_tripId',
+          );
+          return;
         }
+
+        // If not found in user_trip, check selected_trips
+        if (currentUserId != null) {
+          final selectedTripRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUserId)
+              .collection('selected_trips')
+              .doc(widget.se_tripId);
+
+          final selectedTripSnap = await selectedTripRef.get();
+
+          if (selectedTripSnap.exists) {
+            final checkValue = selectedTripSnap.data()?['check'] as int?;
+            setState(() {
+              userTripStatus = checkValue;
+              _useUserData = true;
+            });
+            print('Found selected trip with status: $userTripStatus');
+          }
+        }
+      } catch (e) {
+        print('Error loading user trip status: $e');
       }
-    } catch (e) {
-      print('Error loading user trip status: $e');
     }
   }
 
@@ -439,100 +568,297 @@ class _TimelineBodyState extends State<TimelineBody> {
     }
   }
 
-  // Chuyển đến trang đánh giá hoặc tạo đánh giá mới
+  // Phương thức đưa người dùng đến trang đánh giá khi hoàn thành chuyến đi
   Future<void> _navigateToReview(int tripStatus) async {
     if (tripData == null) return;
 
-    final locationSnapshot =
-        await FirebaseFirestore.instance
-            .collection('dia_diem')
-            .doc(widget.locationId)
-            .get();
-
-    if (!locationSnapshot.exists) return;
-
-    final locationData = locationSnapshot.data() as Map<String, dynamic>;
-    final locationName = locationData['ten'] as String? ?? 'Không xác định';
-
-    // Tạo đối tượng review
-    final reviewData = {
-      'trip_id': widget.tripId,
-      'location': locationName,
-      'duration':
-          '${tripData!.soNgay} ngày ${tripData!.soNgay > 1 ? (tripData!.soNgay - 1) : 0} đêm',
-      'rating': 0,
-      'comment': '',
-      'imageUrl': locationData['hinh_anh1'] ?? 'assets/images/vungtau.png',
-      'accommodation': tripData!.noiO,
-      'price': tripData!.chiPhi,
-      'people': tripData!.soNguoi,
-    };
-
-    // Kiểm tra nếu người dùng đã có đánh giá cho chuyến đi này
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    final existingReviewSnapshot =
-        await FirebaseFirestore.instance
-            .collection('reviews')
-            .where('user_id', isEqualTo: currentUserId)
-            .where('trip_id', isEqualTo: widget.tripId)
-            .get();
+    if (currentUserId.isEmpty) return;
 
-    // Nếu người dùng đã hoàn thành chuyến đi, hỏi xem có muốn đánh giá ngay không
-    if (tripStatus == 1 && existingReviewSnapshot.docs.isEmpty) {
-      final shouldReview =
-          await showDialog<bool>(
-            context: context,
-            builder:
-                (context) => AlertDialog(
-                  title: const Text('Đánh giá chuyến đi'),
-                  content: const Text(
-                    'Bạn đã hoàn thành chuyến đi! Bạn có muốn đánh giá ngay không?',
+    try {
+      // Kiểm tra xem người dùng đã có đánh giá cho chuyến đi này chưa
+      final existingReviewSnapshot =
+          await FirebaseFirestore.instance
+              .collection('reviews')
+              .where('user_id', isEqualTo: currentUserId)
+              .where('se_trip_id', isEqualTo: widget.se_tripId)
+              .get();
+
+      if (existingReviewSnapshot.docs.isNotEmpty) {
+        // Đã có đánh giá, không cần tạo mới
+        setState(() {
+          hasReview = true;
+          reviewId = existingReviewSnapshot.docs.first.id;
+        });
+        return;
+      }
+
+      // Tìm thông tin chuyến đi từ selected_trips
+      Map<String, dynamic> tripInfo = {};
+      String actualSeTripId = widget.se_tripId ?? '';
+
+      // Lấy thông tin chính xác từ user_trip nếu có
+      String masterTripId = widget.tripId; // Giá trị mặc định
+
+      // Tìm user_trip document để lấy trip_id chính xác
+      if (actualSeTripId.isNotEmpty) {
+        try {
+          final userTripSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('user_trip')
+                  .where('user_id', isEqualTo: currentUserId)
+                  .where('se_trip_id', isEqualTo: actualSeTripId)
+                  .limit(1)
+                  .get();
+
+          if (userTripSnapshot.docs.isNotEmpty) {
+            // Lấy trip_id từ user_trip collection
+            final userTripData = userTripSnapshot.docs.first.data();
+            masterTripId = userTripData['trip_id'] ?? widget.tripId;
+
+            print('Lấy được trip_id từ user_trip: $masterTripId');
+          } else {
+            print(
+              'Không tìm thấy document trong user_trip với se_trip_id: $actualSeTripId',
+            );
+          }
+        } catch (e) {
+          print('Lỗi khi truy vấn user_trip: $e');
+        }
+      }
+
+      if (actualSeTripId.isNotEmpty) {
+        final seTripDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(currentUserId)
+                .collection('selected_trips')
+                .doc(actualSeTripId)
+                .get();
+
+        if (seTripDoc.exists) {
+          final seTripData = seTripDoc.data() ?? {};
+
+          // Lấy thông tin địa điểm
+          String locationName = 'Không xác định';
+          String imageUrl = 'assets/images/vungtau.png';
+
+          if (widget.locationId.isNotEmpty) {
+            try {
+              final locationDoc =
+                  await FirebaseFirestore.instance
+                      .collection('dia_diem')
+                      .doc(widget.locationId)
+                      .get();
+
+              if (locationDoc.exists) {
+                final locationData = locationDoc.data() ?? {};
+                locationName =
+                    locationData['ten']?.toString() ?? 'Không xác định';
+
+                if (locationData.containsKey('hinh_anh1') &&
+                    locationData['hinh_anh1'] != null &&
+                    locationData['hinh_anh1'].toString().isNotEmpty) {
+                  imageUrl = locationData['hinh_anh1'].toString();
+                }
+              }
+            } catch (e) {
+              print('Lỗi khi lấy thông tin địa điểm: $e');
+            }
+          }
+
+          // Định dạng thông tin ngày
+          final soDays = _extractIntValue(seTripData, 'so_ngay', 1);
+
+          // Tạo đối tượng review - Sử dụng masterTripId đã lấy được từ user_trip
+          tripInfo = {
+            'trip_id': masterTripId, // Sử dụng trip_id lấy từ user_trip
+            'location_id': widget.locationId,
+            'se_trip_id': actualSeTripId, // User's selected trip ID
+            'location': locationName,
+            'duration': '$soDays ngày ${soDays > 1 ? (soDays - 1) : 0} đêm',
+            'imageUrl': seTripData['anh'] ?? imageUrl,
+            'accommodation': seTripData['noi_o'] ?? 'Không xác định',
+            'price': _extractIntValue(seTripData, 'chi_phi', 0),
+            'people': _extractIntValue(seTripData, 'so_nguoi', 1),
+            'activities': _extractIntValue(seTripData, 'so_act', 0),
+            'meals': _extractIntValue(seTripData, 'so_eat', 0),
+            'completion_date': _formatDate(DateTime.now()),
+            'userTripDocId': userTripDocId,
+          };
+        }
+      }
+
+      // Nếu không có dữ liệu, tạo dữ liệu đơn giản từ tripData
+      if (tripInfo.isEmpty && tripData != null) {
+        String locationName = tripData!.tripName;
+        String imageUrl = tripData!.anh ?? 'assets/images/vungtau.png';
+
+        // Thử lấy thông tin từ dia_diem
+        if (widget.locationId.isNotEmpty) {
+          try {
+            final locationDoc =
+                await FirebaseFirestore.instance
+                    .collection('dia_diem')
+                    .doc(widget.locationId)
+                    .get();
+
+            if (locationDoc.exists) {
+              final locationData = locationDoc.data() ?? {};
+              locationName = locationData['ten']?.toString() ?? locationName;
+
+              if (locationData.containsKey('hinh_anh1') &&
+                  locationData['hinh_anh1'] != null &&
+                  locationData['hinh_anh1'].toString().isNotEmpty) {
+                imageUrl = locationData['hinh_anh1'].toString();
+              }
+            }
+          } catch (e) {
+            print('Lỗi khi lấy thông tin địa điểm: $e');
+          }
+        }
+
+        // Sử dụng masterTripId đã lấy được
+        tripInfo = {
+          'trip_id': masterTripId, // Sử dụng trip_id lấy từ user_trip
+          'location_id': widget.locationId,
+          'se_trip_id': actualSeTripId, // User's selected trip ID
+          'location': locationName,
+          'duration':
+              '${tripData!.soNgay} ngày ${tripData!.soNgay > 1 ? (tripData!.soNgay - 1) : 0} đêm',
+          'imageUrl': imageUrl,
+          'accommodation': tripData!.noiO ?? 'Không xác định',
+          'price': tripData!.chiPhi,
+          'people': tripData!.soNguoi,
+          'activities': tripData!.soAct ?? 0,
+          'meals': tripData!.soEat ?? 0,
+          'completion_date': _formatDate(DateTime.now()),
+          'userTripDocId': userTripDocId,
+        };
+      }
+
+      // Log để debug
+      print('Dữ liệu review trước khi gửi đến EditReviewScreen:');
+      print('master trip_id: $masterTripId');
+      print('se_trip_id (user): $actualSeTripId');
+      print('Full tripInfo: $tripInfo');
+
+      // Nếu chuyến đi đã hoàn thành, hỏi người dùng có muốn đánh giá ngay không
+      if (tripStatus == 1) {
+        final shouldReview =
+            await showDialog<bool>(
+              context: context,
+              builder:
+                  (context) => AlertDialog(
+                    title: const Text('Đánh giá chuyến đi'),
+                    content: const Text(
+                      'Bạn đã hoàn thành chuyến đi! Bạn có muốn đánh giá ngay không?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text(
+                          'Để sau',
+                          style: TextStyle(color: Color(MyColor.pr3)),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text(
+                          'Đánh giá ngay',
+                          style: TextStyle(color: Color(MyColor.pr5)),
+                        ),
+                      ),
+                    ],
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text(
-                        'Để sau',
-                        style: TextStyle(color: Color(MyColor.pr3)),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text(
-                        'Đánh giá ngay',
-                        style: TextStyle(color: Color(MyColor.pr5)),
-                      ),
-                    ),
-                  ],
-                ),
-          ) ??
-          false;
+            ) ??
+            false;
 
-      if (shouldReview) {
-        await Navigator.push(
+        if (shouldReview) {
+          print('Dữ liệu review: $tripInfo'); // Ghi log để kiểm tra
+
+          // Thêm các trường cần thiết
+          tripInfo['user_id'] = currentUserId;
+
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => EditReviewScreen(
+                    review: tripInfo,
+                    isNewReview: true,
+                    userId: currentUserId,
+                  ),
+            ),
+          );
+
+          if (result == true) {
+            // Reload lại dữ liệu đánh giá sau khi đã tạo xong
+            await checkIfReviewed();
+
+            // Thông báo đã đánh giá thành công
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Đã đánh giá chuyến đi thành công'),
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Lỗi khi chuyển đến trang đánh giá: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
           context,
-          MaterialPageRoute(
-            builder:
-                (context) => EditReviewScreen(
-                  review: reviewData,
-                  isNewReview: true,
-                  userId: currentUserId,
-                ),
-          ),
-        );
-
-        // Cập nhật lại trạng thái đánh giá sau khi quay về
-        await checkIfReviewed();
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     }
   }
 
-  // Thêm hàm kiểm tra xem người dùng đã đánh giá chuyến đi này chưa
+  // Phương thức hỗ trợ để định dạng ngày
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  // Phương thức hỗ trợ để trích xuất giá trị int từ map
+  int _extractIntValue(
+    Map<String, dynamic> data,
+    String key,
+    int defaultValue,
+  ) {
+    if (!data.containsKey(key) || data[key] == null) return defaultValue;
+
+    if (data[key] is int) return data[key];
+    return int.tryParse(data[key].toString()) ?? defaultValue;
+  }
+
   Future<void> checkIfReviewed() async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
 
     try {
+      // Nếu có se_trip_id, ưu tiên tìm theo se_trip_id trước
+      if (widget.se_tripId != null && widget.se_tripId!.isNotEmpty) {
+        final reviewBySeTrip =
+            await FirebaseFirestore.instance
+                .collection('reviews')
+                .where('user_id', isEqualTo: currentUserId)
+                .where('se_trip_id', isEqualTo: widget.se_tripId)
+                .limit(1)
+                .get();
+
+        if (reviewBySeTrip.docs.isNotEmpty) {
+          setState(() {
+            hasReview = true;
+            reviewId = reviewBySeTrip.docs.first.id;
+          });
+          return;
+        }
+      }
+
+      // Nếu không tìm thấy theo se_trip_id hoặc không có se_trip_id, tìm theo trip_id
       final reviewSnapshot =
           await FirebaseFirestore.instance
               .collection('reviews')
@@ -547,8 +873,6 @@ class _TimelineBodyState extends State<TimelineBody> {
           reviewId = reviewSnapshot.docs.first.id;
         }
       });
-
-      print('Có đánh giá: $hasReview, Review ID: $reviewId');
     } catch (e) {
       print('Lỗi khi kiểm tra đánh giá: $e');
     }
@@ -739,7 +1063,7 @@ class _TimelineBodyState extends State<TimelineBody> {
               .doc(userId)
               .collection('selected_trips')
               .doc(); // mới
-        se_tripId = newTripRef.id;
+      se_tripId = newTripRef.id;
       // 3. Sao chép dữ liệu gốc
       await newTripRef.set({
         ...originalSnap.data()!,
@@ -787,9 +1111,9 @@ class _TimelineBodyState extends State<TimelineBody> {
         userTripStatus = 0;
         allActivitiesCompleted = false;
       });
-        Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => HomePage(se_tripId: se_tripId)),
-    );
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => HomePage(se_tripId: se_tripId)),
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã thiết lập lại chuyến đi thành công!')),
       );
@@ -853,16 +1177,6 @@ class _TimelineBodyState extends State<TimelineBody> {
         return;
       }
 
-      // Tạo mới bản ghi user_trip với trạng thái mặc định là đang áp dụng (0)
-      final docRef = await FirebaseFirestore.instance
-          .collection('user_trip')
-          .add({
-            'user_id': currentUserId,
-            'se_trip_id': widget.se_tripId,
-            'check': 0,
-            'created_at': now,
-            'updated_at': now,
-          });
       //Cập nhật user document trong selected_trips
       // Lấy dữ liệu gốc từ master trip
       if (widget.se_tripId == null || widget.se_tripId == "") {
@@ -874,6 +1188,7 @@ class _TimelineBodyState extends State<TimelineBody> {
           ...masterTripSnapshot.data()!,
           'location_id': widget.locationId, // Thêm locationID
           'status': true,
+          'trip_id': widget.tripId,
           'check': 0,
           'saved_at': FieldValue.serverTimestamp(),
         });
@@ -910,12 +1225,25 @@ class _TimelineBodyState extends State<TimelineBody> {
         // Tạo document chính với locationID
         await _userTripRef!.set({
           ...userTripSnapshot.data()!,
-          'location_id': widget.locationId, // Thêm locationID
+          'location_id': widget.locationId,
+          'trip_id': widget.tripId, // Thêm locationID
           'status': true,
           'check': 0,
           'saved_at': FieldValue.serverTimestamp(),
         });
       }
+
+      // Tạo mới bản ghi user_trip với trạng thái mặc định là đang áp dụng (0)
+      final docRef = await FirebaseFirestore.instance
+          .collection('user_trip')
+          .add({
+            'user_id': currentUserId,
+            'se_trip_id': se_tripId,
+            'trip_id': widget.tripId,
+            'check': 0,
+            'created_at': now,
+            'updated_at': now,
+          });
 
       // Ensure consistent status values in both collections
       await Future.wait([
@@ -1416,28 +1744,51 @@ class _TimelineBodyState extends State<TimelineBody> {
                                 final newStatus = !tripData!.status;
 
                                 // Cập nhật đồng thời cả 2 collection
-                                await Future.wait([
-                                  // Cập nhật selected_trips trong users
-                                  FirebaseFirestore.instance
+                                await FirebaseFirestore.instance.runTransaction((
+                                  transaction,
+                                ) async {
+                                  // 1. Cập nhật selected_trips
+                                  final selectedTripRef = FirebaseFirestore
+                                      .instance
                                       .collection('users')
                                       .doc(user.uid)
                                       .collection('selected_trips')
-                                      .doc(widget.tripId)
-                                      .update({
-                                        'check': null,
-                                        'status': newStatus,
-                                      }),
+                                      .doc(widget.se_tripId);
 
-                                  // Cập nhật user_trip
-                                  FirebaseFirestore.instance
-                                      .collection('user_trip')
-                                      .doc(userTripDocId)
-                                      .update({
-                                        'status': newStatus,
-                                        'updated_at':
-                                            FieldValue.serverTimestamp(),
-                                      }),
-                                ]);
+                                  final selectedTripDoc = await transaction.get(
+                                    selectedTripRef,
+                                  );
+                                  if (!selectedTripDoc.exists)
+                                    throw Exception(
+                                      'Không tìm thấy selected_trip document',
+                                    );
+
+                                  transaction.update(selectedTripRef, {
+                                    //'status': newStatus,
+                                    'check': newStatus ? 0 : null,
+                                    'updated_at': FieldValue.serverTimestamp(),
+                                  });
+
+                                  // // 2. Cập nhật user_trip
+                                  // final userTripRef = FirebaseFirestore
+                                  //     .instance
+                                  //     .collection('user_trip')
+                                  //     .doc(userTripDocId);
+
+                                  // final userTripDoc = await transaction.get(
+                                  //   userTripRef,
+                                  // );
+                                  // if (!userTripDoc.exists)
+                                  //   throw Exception(
+                                  //     'Không tìm thấy user_trip document',
+                                  //   );
+                                  //
+                                  // transaction.update(userTripRef, {
+                                  //   'status': newStatus,
+                                  //   'updated_at':
+                                  //       FieldValue.serverTimestamp(),
+                                  // });
+                                });
 
                                 // Cập nhật state và reload dữ liệu
                                 setState(() {
@@ -1478,9 +1829,7 @@ class _TimelineBodyState extends State<TimelineBody> {
                       ),
                     ),
                     child: Text(
-                      tripData!.status
-                          ? 'Dừng hành trình'
-                          : 'Bắt đầu hành trình',
+                      check == null ? 'Bắt đầu hành trình' : 'Dừng hành trình',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
