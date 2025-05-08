@@ -28,7 +28,9 @@ class _TripCardState extends State<TripCard> {
   double _totalCost = 0;
   int _mealCount = 0;
   int _loveCount = 0;
+  double _averageRating = 0.0;
   StreamSubscription? _loveSubscription;
+  StreamSubscription? _reviewSubscription;
   bool _useUserData = false;
 
   late DocumentReference<Map<String, dynamic>> _masterTripRef;
@@ -42,59 +44,58 @@ class _TripCardState extends State<TripCard> {
   }
 
   @override
-void initState() {
-  super.initState();
+  void initState() {
+    super.initState();
 
-  // Kiểm tra ID hợp lệ trước khi tạo DocumentReference
-  if (widget.trip.id.isEmpty || widget.trip.locationId.isEmpty) {
-    print("[ERROR] trip.id hoặc locationId rỗng!");
-    return;
-  }
-
-  // Luôn có _masterTripRef
-  _masterTripRef = FirebaseFirestore.instance
-      .collection('dia_diem')
-      .doc(widget.trip.locationId)
-      .collection('trips')
-      .doc(widget.trip.id);
-
-  // Nếu có user và trip.id hợp lệ thì tạo _userTripRef
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid != null) {
-    _userTripRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('selected_trips')
-        .doc(widget.trip.id);
-  }
-
-  // Gọi sau khi đảm bảo không có lỗi
-  _initData();
-  _checkIfLoved();
-  _listenToLoveCount();
-}
-
-
-  Future<void> _initData() async {
-  try {
-    if (_userTripRef != null) {
-      final snap = await _userTripRef!.get();
-      if (snap.exists) {
-        if (!mounted) return; // tránh lỗi gọi setState sau dispose
-        setState(() => _useUserData = true);
-      }
+    // Kiểm tra ID hợp lệ trước khi tạo DocumentReference
+    if (widget.trip.id.isEmpty || widget.trip.locationId.isEmpty) {
+      print("[ERROR] trip.id hoặc locationId rỗng!");
+      return;
     }
 
-    await Future.wait([
-      _loadActivityCount(),
-      _loadMealCount(),
-      _loadTotalCost(),
-    ]);
-  } catch (e) {
-    print('[ERROR] _initData thất bại: $e');
-  }
-}
+    // Luôn có _masterTripRef
+    _masterTripRef = FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.trip.locationId)
+        .collection('trips')
+        .doc(widget.trip.id);
 
+    // Nếu có user và trip.id hợp lệ thì tạo _userTripRef
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _userTripRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('selected_trips')
+          .doc(widget.trip.id);
+    }
+
+    // Gọi sau khi đảm bảo không có lỗi
+    _initData();
+    _checkIfLoved();
+    _listenToLoveCount();
+    _listenToReviews();
+  }
+
+  Future<void> _initData() async {
+    try {
+      if (_userTripRef != null) {
+        final snap = await _userTripRef!.get();
+        if (snap.exists) {
+          if (!mounted) return; // tránh lỗi gọi setState sau dispose
+          setState(() => _useUserData = true);
+        }
+      }
+
+      await Future.wait([
+        _loadActivityCount(),
+        _loadMealCount(),
+        _loadTotalCost(),
+      ]);
+    } catch (e) {
+      print('[ERROR] _initData thất bại: $e');
+    }
+  }
 
   void _listenToLoveCount() {
     _loveSubscription = FirebaseFirestore.instance
@@ -110,9 +111,39 @@ void initState() {
     });
   }
 
+  void _listenToReviews() {
+    _reviewSubscription = FirebaseFirestore.instance
+        .collection('reviews')
+        .where('trip_id', isEqualTo: widget.trip.id)
+        .snapshots()
+        .listen((snapshot) {
+      if (mounted) {
+        // Mặc định nếu không có đánh giá thì rating = 0
+        double sum = 0;
+        int count = 0;
+        
+        if (snapshot.docs.isNotEmpty) {
+          for (var doc in snapshot.docs) {
+            // Lấy giá trị votes từ document
+            final votes = doc.data()['votes'];
+            if (votes != null && votes is num) {
+              sum += votes.toDouble();
+              count++;
+            }
+          }
+        }
+        
+        setState(() {
+          _averageRating = count > 0 ? sum / count : 0.0;
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _loveSubscription?.cancel();
+    _reviewSubscription?.cancel();
     super.dispose();
   }
 
@@ -221,6 +252,64 @@ void initState() {
     if (mounted) setState(() => _totalCost = sum);
   }
 
+  // Hiển thị sao dựa trên rating
+  Widget _buildRatingStars(double rating) {
+    // Nếu chưa có đánh giá nào (rating = 0)
+    if (rating <= 0) {
+      return Text(
+        'Chưa có đánh giá',
+        style: TextStyle(
+          color: Color(MyColor.pr5),
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+    
+    // Làm tròn xuống 0.5 gần nhất
+    double roundedRating = (rating * 2).round() / 2;
+    
+    return Row(
+      children: [
+        Icon(
+          roundedRating >= 1 ? Icons.star : roundedRating >= 0.5 ? Icons.star_half : Icons.star_border,
+          color: Colors.amber,
+          size: 18,
+        ),
+        Icon(
+          roundedRating >= 2 ? Icons.star : roundedRating >= 1.5 ? Icons.star_half : Icons.star_border,
+          color: Colors.amber,
+          size: 18,
+        ),
+        Icon(
+          roundedRating >= 3 ? Icons.star : roundedRating >= 2.5 ? Icons.star_half : Icons.star_border,
+          color: Colors.amber,
+          size: 18,
+        ),
+        Icon(
+          roundedRating >= 4 ? Icons.star : roundedRating >= 3.5 ? Icons.star_half : Icons.star_border,
+          color: Colors.amber,
+          size: 18,
+        ),
+        Icon(
+          roundedRating >= 5 ? Icons.star : roundedRating >= 4.5 ? Icons.star_half : Icons.star_border,
+          color: Colors.amber,
+          size: 18,
+        ),
+        SizedBox(width: 4),
+        Text(
+          '${roundedRating.toStringAsFixed(1)}',
+          style: TextStyle(
+            color: Color(MyColor.pr5),
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -262,26 +351,52 @@ void initState() {
                   ),
                 ),
               ),
+              // Nút yêu thích với số lượt thích ở chính giữa
               Positioned(
-                right: 0,
-                bottom: 0,
-                child: IconButton(
-                  onPressed: _handleLovePressed,
-                  icon: Icon(
-                    Icons.favorite,
-                    color:
-                        _loved ? Color(MyColor.red) : Color(MyColor.white),
-                    shadows: [
-                      Shadow(
-                        color: Color(MyColor.black),
-                        blurRadius: 4.0,
-                        offset: const Offset(0, 0.5),
+                right: 8,
+                bottom: 8,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Biểu tượng trái tim không có background
+                    IconButton(
+                      onPressed: _handleLovePressed,
+                      icon: Icon(
+                        Icons.favorite,
+                        color: _loved ? Color(MyColor.red) : Color(MyColor.white),
+                        shadows: [
+                          Shadow(
+                            color: Color(MyColor.black),
+                            blurRadius: 4.0,
+                            offset: const Offset(0, 0.5),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  iconSize: 30,
+                      padding: EdgeInsets.zero,
+                      iconSize: 30,
+                    ),
+                    // Số lượt thích ở chính giữa biểu tượng trái tim
+                    Container(
+                      padding: EdgeInsets.all(3),
+                      child: Text(
+                        '$_loveCount',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black,
+                              blurRadius: 2.0,
+                              offset: const Offset(0.5, 0.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              )
+              ),
             ],
           ),
           Container(
@@ -307,20 +422,9 @@ void initState() {
                     _buildInfo("Chi phí",
                         "${NumberFormat('#,###', 'vi_VN').format(widget.trip.chiPhi)}đ",
                         isText: true),
-                    Row(
-                      children: [
-                        Icon(Icons.favorite, color: Colors.red, size: 20),
-                        SizedBox(width: 4),
-                        Text(
-                          '$_loveCount lượt yêu thích',
-                          style: TextStyle(
-                            color: Color(MyColor.pr5),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    )
+                    // Hiển thị rating stars
+                    _buildRatingStars(_averageRating),
+                    // Không cần hiển thị số lượt yêu thích ở đây vì đã hiển thị ở trên hình ảnh
                   ],
                 ),
               ],

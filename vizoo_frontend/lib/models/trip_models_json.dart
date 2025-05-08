@@ -104,6 +104,8 @@ class Trip {
     );
   }
 
+  get tripName => null;
+
   Map<String, dynamic> toJson1() {
     return {
       'name': name,

@@ -1,20 +1,23 @@
-// lib/pages/profile/widgets/trip_review_widget.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/trip_reviews_card.dart';
 import 'package:vizoo_frontend/pages/profile/pages/edit_reviews_screen.dart';
+import '../pages/other_reviews_screen.dart';
+import '../widgets/trip_data_service.dart';
 
 class TripReviewWidget extends StatefulWidget {
   final String tripId;
   final String reviewId;
+  final bool showOtherReviews; // Tham số để hiển thị nút xem đánh giá khác
 
   const TripReviewWidget({
     super.key,
     required this.tripId,
     required this.reviewId,
+    this.showOtherReviews =
+    false, // Mặc định không hiển thị nút xem đánh giá khác
   });
 
   @override
@@ -26,6 +29,9 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
   Map<String, dynamic> _reviewData = {};
   Map<String, dynamic> _tripData = {};
   Map<String, dynamic> _locationData = {};
+  double _averageRating = 0.0;
+  int _totalReviews = 0;
+  final TripDataService _tripService = TripDataService();
 
   @override
   void initState() {
@@ -35,75 +41,129 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
 
   Future<void> _loadReviewData() async {
     try {
-      // Fetch review data
+      // 1. Lấy dữ liệu đánh giá từ Firestore
       final reviewDoc =
-          await FirebaseFirestore.instance
-              .collection('reviews')
-              .doc(widget.reviewId)
-              .get();
+      await FirebaseFirestore.instance
+          .collection('reviews')
+          .doc(widget.reviewId)
+          .get();
 
       if (!reviewDoc.exists) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đánh giá không tồn tại')),
-          );
-          Navigator.pop(context);
-        }
+        _handleError('Đánh giá không tồn tại');
         return;
       }
 
       final reviewData = reviewDoc.data() as Map<String, dynamic>;
-      final tripId = reviewData['trip_id'] as String;
+      final tripId = reviewData['trip_id'] as String? ?? '';
 
-      print('Đang tải dữ liệu review cho trip: $tripId');
+      // Kiểm tra nếu có trip_details trong document
+      Map<String, dynamic> tripDetails = {};
+      if (reviewData.containsKey('trip_details') &&
+          reviewData['trip_details'] is Map) {
+        tripDetails = Map<String, dynamic>.from(reviewData['trip_details']);
+      }
 
-      // Tìm trip trong tất cả các location
-      QuerySnapshot locationDocs =
-          await FirebaseFirestore.instance.collection('dia_diem').get();
+      String locationId = reviewData['location_id'] ?? '';
+      String seTripId = reviewData['se_trip_id'] ?? '';
 
-      Map<String, dynamic> tripData = {};
-      Map<String, dynamic> locationData = {};
-
-      for (var locationDoc in locationDocs.docs) {
-        String locationId = locationDoc.id;
-
-        final tripDoc =
-            await FirebaseFirestore.instance
-                .collection('dia_diem')
-                .doc(locationId)
-                .collection('trips')
-                .doc(tripId)
-                .get();
-
-        if (tripDoc.exists) {
-          tripData = tripDoc.data() ?? {};
-          locationData = locationDoc.data() as Map<String, dynamic>? ?? {};
-          locationData['id'] = locationId; // Lưu locationId
-          print('Đã tìm thấy trip trong location: $locationId');
-          break;
+      // Nếu không có location_id trong review data, thử lấy từ tripId
+      if (locationId.isEmpty && tripId.contains('_')) {
+        final parts = tripId.split('_');
+        if (parts.isNotEmpty) {
+          locationId = parts[0];
         }
       }
 
-      if (mounted) {
-        setState(() {
-          _reviewData = {'id': reviewDoc.id, ...reviewData};
-          _tripData = tripData;
-          _locationData = locationData;
-          _isLoading = false;
-        });
+      // 2. Lấy thêm dữ liệu trip nếu cần
+      final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+      Map<String, dynamic> seTripData = {};
 
-        print('Dữ liệu trip: $_tripData');
-        print('Dữ liệu location: $_locationData');
+      // Lấy dữ liệu từ selected_trip nếu có seTripId
+      if (seTripId.isNotEmpty) {
+        final seTripDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('selected_trips')
+            .doc(seTripId)
+            .get();
+
+        if (seTripDoc.exists) {
+          seTripData = seTripDoc.data() ?? {};
+
+          // Cập nhật locationId từ selected_trip nếu có
+          if (locationId.isEmpty &&
+              seTripData.containsKey('location_id') &&
+              seTripData['location_id'].toString().isNotEmpty) {
+            locationId = seTripData['location_id'].toString();
+          }
+        }
+      }
+
+      // 3. Lấy thông tin vị trí
+      Map<String, dynamic> locationData = {};
+      if (locationId.isNotEmpty) {
+        final locationDoc =
+        await FirebaseFirestore.instance
+            .collection('dia_diem')
+            .doc(locationId)
+            .get();
+
+        if (locationDoc.exists) {
+          locationData = locationDoc.data() ?? {};
+          locationData['id'] = locationId;
+        }
+      }
+
+      // 4. Tính điểm đánh giá trung bình
+      final averageRating = await _tripService.getTripAverageRating(tripId);
+
+      // Lấy tổng số đánh giá
+      final reviewsSnapshot =
+      await FirebaseFirestore.instance
+          .collection('reviews')
+          .where('trip_id', isEqualTo: tripId)
+          .get();
+
+      _totalReviews = reviewsSnapshot.docs.length;
+
+      // 5. Ưu tiên sử dụng dữ liệu từ trip_details nếu có
+      if (tripDetails.isNotEmpty) {
+        // Sử dụng tripDetails để điền thông tin
+        if (mounted) {
+          setState(() {
+            _reviewData = {'id': reviewDoc.id, ...reviewData};
+            _tripData = {...seTripData, ...tripDetails};
+            _locationData = locationData;
+            _averageRating = averageRating;
+            _isLoading = false;
+          });
+        }
+      } else {
+        // Sử dụng seTripData và locationData như cũ
+        if (mounted) {
+          setState(() {
+            _reviewData = {'id': reviewDoc.id, ...reviewData};
+            _tripData = seTripData;
+            _locationData = locationData;
+            _averageRating = averageRating;
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi khi tải dữ liệu: $e')));
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      _handleError('Lỗi khi tải dữ liệu: $e');
+    }
+  }
+
+  void _handleError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -113,23 +173,29 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
           context: context,
           builder:
               (context) => AlertDialog(
-                title: const Text('Xác nhận xóa'),
-                content: const Text(
-                  'Bạn có chắc chắn muốn xóa đánh giá này không?',
+            title: const Text('Xác nhận xóa'),
+            content: const Text(
+              'Bạn có chắc chắn muốn xóa đánh giá này không?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text(
+                  'Hủy',
+                  style: TextStyle(color: Color(MyColor.pr3)),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Hủy', style: TextStyle(color: Color(MyColor.pr3)),),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Xóa', style: TextStyle(color: Color(MyColor.pr5)),),
-                  ),
-                ],
               ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text(
+                  'Xóa',
+                  style: TextStyle(color: Color(MyColor.pr5)),
+                ),
+              ),
+            ],
+          ),
         ) ??
-        false;
+            false;
 
     if (!confirm) return;
 
@@ -147,18 +213,10 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Đã xóa đánh giá')));
-        Navigator.pop(context, true); // Return with deletion result
+        Navigator.pop(context, true); // Trở về kèm kết quả thành công
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi khi xóa đánh giá: $e')));
-      }
+      _handleError('Lỗi khi xóa đánh giá: $e');
     }
   }
 
@@ -188,28 +246,34 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
     final rating = _reviewData['votes'] ?? 0;
     final comment = _reviewData['comment'] ?? '';
 
-    // Create review info for display in TripDisplayCard
+    // Trích xuất thông tin cho TripDisplayCard
+    final int soDays = _extractIntValue(_tripData, 'so_ngay', 1);
+
+    // Tạo thông tin cho TripDisplayCard
     final Map<String, dynamic> tripReviewInfo = {
       'id': _reviewData['id'],
       'trip_id': _reviewData['trip_id'],
       'location_id':
-          _locationData['id'] ?? _reviewData['trip_id'].split('_').first,
+      _locationData['id'] ?? _extractLocationId(_reviewData['trip_id']),
+      'se_trip_id': _tripData['se_trip_id'] ?? '',
       'location': _locationData['ten'] ?? 'Không xác định',
-      'duration':
-          _tripData['so_ngay'] != null
-              ? '${_tripData['so_ngay']} ngày ${int.parse(_tripData['so_ngay'].toString()) > 1 ? (int.parse(_tripData['so_ngay'].toString()) - 1) : 0} đêm'
-              : '',
+      'duration': '$soDays ngày ${soDays > 1 ? (soDays - 1) : 0} đêm',
       'rating': rating,
       'comment': comment,
-      'imageUrl': _locationData['hinh_anh1'] ?? 'assets/images/vungtau.png',
+      'imageUrl':
+      _tripData['anh'] ??
+          _locationData['hinh_anh1'] ??
+          'assets/images/vungtau.png',
       'accommodation': _tripData['noi_o'] ?? 'Không xác định',
-      'price': _tripData['chi_phi'] ?? 0,
-      'people': _tripData['so_nguoi'] ?? 1,
-      'activities': _tripData['so_act'] ?? 0,
-      'meals': _tripData['so_eat'] ?? 0,
+      'price': _extractIntValue(_tripData, 'chi_phi', 0),
+      'people': _extractIntValue(_tripData, 'so_nguoi', 1),
+      'activities': _extractIntValue(_tripData, 'so_act', 0),
+      'meals': _extractIntValue(_tripData, 'so_eat', 0),
+      'averageRating': _averageRating,
+      'totalReviews': _totalReviews,
     };
 
-    // Create action buttons
+    // Tạo các nút thao tác
     final List<Widget> actionButtons = [
       ElevatedButton(
         onPressed: () {
@@ -218,9 +282,9 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
             MaterialPageRoute(
               builder:
                   (context) => EditReviewScreen(
-                    review: tripReviewInfo,
-                    isNewReview: false,
-                  ),
+                review: tripReviewInfo,
+                isNewReview: false,
+              ),
             ),
           ).then((result) {
             if (result == true) {
@@ -248,7 +312,7 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
       ),
     ];
 
-    // Create extra content with rating and comment
+    // Tạo nội dung bổ sung với đánh giá và bình luận
     final Widget extraContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -264,7 +328,7 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
         Row(
           children: List.generate(
             5,
-            (index) => Icon(
+                (index) => Icon(
               index < rating ? Icons.star : Icons.star_border,
               color: index < rating ? Colors.amber : Colors.grey,
               size: 20,
@@ -299,6 +363,64 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
           style: const TextStyle(fontSize: 14, color: Color(MyColor.black)),
         ),
         const SizedBox(height: 12),
+
+        // Hiển thị thông tin đánh giá trung bình nếu có
+        if (_totalReviews > 1) // Chỉ hiển thị khi có nhiều hơn 1 đánh giá
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'Đánh giá trung bình: ',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    '${_averageRating.toStringAsFixed(1)}',
+                    style: TextStyle(
+                      color: Color(MyColor.pr5),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.star, color: Colors.amber, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    '($_totalReviews đánh giá)',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+
+              // Nút xem đánh giá khác - chỉ hiển thị khi được kích hoạt
+              if (widget.showOtherReviews)
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => OtherReviewsScreen(
+                          tripId: widget.tripId,
+                          locationName: tripReviewInfo['location'],
+                          tripDuration: tripReviewInfo['duration'],
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.reviews, size: 16),
+                  label: const Text('Xem đánh giá khác'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    foregroundColor: Color(MyColor.pr4),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+            ],
+          ),
       ],
     );
 
@@ -310,5 +432,28 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
       actionButtons: actionButtons,
       extraContent: extraContent,
     );
+  }
+
+  // Trích xuất giá trị int từ Map
+  int _extractIntValue(
+      Map<String, dynamic> data,
+      String key,
+      int defaultValue,
+      ) {
+    if (!data.containsKey(key) || data[key] == null) return defaultValue;
+
+    if (data[key] is int) return data[key];
+    return int.tryParse(data[key].toString()) ?? defaultValue;
+  }
+
+  // Trích xuất location_id từ trip_id
+  String _extractLocationId(String tripId) {
+    if (tripId.contains('_')) {
+      final parts = tripId.split('_');
+      if (parts.isNotEmpty) {
+        return parts[0];
+      }
+    }
+    return '';
   }
 }

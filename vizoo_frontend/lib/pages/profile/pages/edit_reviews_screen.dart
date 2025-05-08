@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
+import '../widgets/trip_data_service.dart';
 
 class EditReviewScreen extends StatefulWidget {
   final Map<String, dynamic> review;
@@ -24,76 +25,176 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
   late int selectedRating;
   late TextEditingController commentController;
   bool _isSaving = false;
-  Map<String, dynamic>? tripDetails;
+  bool _isLoading = true;
+  final TripDataService _tripService = TripDataService();
+
+  // Trip data
+  String _imageUrl = 'assets/images/vungtau.png';
+  int _activities = 0;
+  int _meals = 0;
+  String _location = '';
+  String _duration = '';
+  String _accommodation = '';
+  int _price = 0;
+  int _people = 1;
+  String _ratingText(int rating) {
+    switch (rating) {
+      case 5:
+        return 'Tuyệt vời';
+      case 4:
+        return 'Rất tốt';
+      case 3:
+        return 'Tốt';
+      case 2:
+        return 'Tạm được';
+      case 1:
+        return 'Tệ';
+      default:
+        return '';
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    // Initialize values from review data
     selectedRating = widget.review['rating'] ?? 0;
     commentController = TextEditingController(
       text: widget.review['comment'] ?? '',
     );
+
+    // Load trip details
     _loadTripDetails();
   }
 
   Future<void> _loadTripDetails() async {
-    if (widget.review['trip_id'] == null) return;
-
     try {
-      String tripId = widget.review['trip_id'];
-      print('Đang tải thông tin cho trip: $tripId');
+      setState(() => _isLoading = true);
 
-      // Phương pháp 1: Thử tìm trong tất cả các location
-      QuerySnapshot locationDocs =
-          await FirebaseFirestore.instance.collection('dia_diem').get();
+      // Get basic info from review object
+      final tripId = widget.review['trip_id'];
+      final seTripId = widget.review['se_trip_id'] ?? '';
 
-      for (var locationDoc in locationDocs.docs) {
-        String locationId = locationDoc.id;
-        print('Kiểm tra location: $locationId cho trip: $tripId');
+      final userId =
+      widget.userId.isEmpty
+          ? FirebaseAuth.instance.currentUser?.uid
+          : widget.userId;
 
-        DocumentSnapshot tripDoc =
+      if (userId == null) {
+        throw Exception("Cannot identify user");
+      }
+
+      Map<String, dynamic> tripData = {};
+
+      // First, try to get data from selected_trips if seTripId is available
+      if (seTripId.isNotEmpty) {
+        final seTripDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('selected_trips')
+            .doc(seTripId)
+            .get();
+
+        if (seTripDoc.exists) {
+          tripData = seTripDoc.data() ?? {};
+          // Update trip info from selected_trip
+          _updateTripInfoFromData(tripData);
+        }
+      }
+      // If no seTripId or couldn't find data, try to find from user_trip
+      else if (tripId != null) {
+        final userTripDocs =
+        await FirebaseFirestore.instance
+            .collection('user_trip')
+            .where('user_id', isEqualTo: userId)
+            .where('trip_id', isEqualTo: tripId)
+            .limit(1)
+            .get();
+
+        if (userTripDocs.docs.isNotEmpty) {
+          final userTripData = userTripDocs.docs.first.data();
+          final foundSeTripId = userTripData['se_trip_id'] as String? ?? '';
+
+          if (foundSeTripId.isNotEmpty) {
+            final seTripDoc =
             await FirebaseFirestore.instance
-                .collection('dia_diem')
-                .doc(locationId)
-                .collection('trips')
-                .doc(tripId)
+                .collection('users')
+                .doc(userId)
+                .collection('selected_trips')
+                .doc(foundSeTripId)
                 .get();
 
-        if (tripDoc.exists) {
-          print('Đã tìm thấy trip trong location: $locationId');
-          print('Trip data: ${tripDoc.data()}');
-          setState(() {
-            tripDetails = tripDoc.data() as Map<String, dynamic>?;
-          });
-          return; // Tìm thấy, dừng tìm kiếm
+            if (seTripDoc.exists) {
+              tripData = seTripDoc.data() ?? {};
+              _updateTripInfoFromData(tripData);
+            }
+          }
         }
       }
 
-      // Phương pháp 2: Thử tìm bằng locationId nếu có
-      if (widget.review['location_id'] != null &&
-          widget.review['location_id'].toString().isNotEmpty) {
-        String locationId = widget.review['location_id'];
-        DocumentSnapshot tripDoc =
-            await FirebaseFirestore.instance
-                .collection('dia_diem')
-                .doc(locationId)
-                .collection('trips')
-                .doc(tripId)
-                .get();
+      // If location is still empty, use data from review
+      if (_location.isEmpty || _location == 'Không xác định') {
+        _location = widget.review['location'] ?? 'Không xác định';
+        _duration = widget.review['duration'] ?? '';
+        _accommodation = widget.review['accommodation'] ?? 'Không xác định';
+        _price = widget.review['price'] ?? 0;
+        _people = widget.review['people'] ?? 1;
+        _activities = widget.review['activities'] ?? 0;
+        _meals = widget.review['meals'] ?? 0;
 
-        if (tripDoc.exists) {
-          print('Đã tìm thấy trip với location_id được cung cấp: $locationId');
-          setState(() {
-            tripDetails = tripDoc.data() as Map<String, dynamic>?;
-          });
-          return;
+        if (widget.review['imageUrl'] != null &&
+            widget.review['imageUrl'].toString().isNotEmpty) {
+          _imageUrl = widget.review['imageUrl'];
         }
       }
 
-      print('Không tìm thấy trip_id: $tripId trong bất kỳ location nào');
+      setState(() => _isLoading = false);
     } catch (e) {
-      print('Lỗi khi tải thông tin trip: $e');
+      print('Error loading trip details: $e');
+      setState(() => _isLoading = false);
     }
+  }
+
+  void _updateTripInfoFromData(Map<String, dynamic> data) {
+    // Update activities and meals count
+    _activities = _extractIntValue(data, 'so_act', 0);
+    _meals = _extractIntValue(data, 'so_eat', 0);
+
+    // Update image
+    if (data.containsKey('anh') &&
+        data['anh'] != null &&
+        data['anh'].toString().isNotEmpty) {
+      _imageUrl = data['anh'].toString();
+    }
+
+    // Update other information
+    _accommodation = data['noi_o']?.toString() ?? 'Không xác định';
+    _price = _extractIntValue(data, 'chi_phi', 0);
+    _people = _extractIntValue(data, 'so_nguoi', 1);
+
+    // Handle days information
+    if (data.containsKey('so_ngay')) {
+      final soDays = _extractIntValue(data, 'so_ngay', 1);
+      _duration = '$soDays ngày ${soDays > 1 ? (soDays - 1) : 0} đêm';
+    }
+
+    // Get location name
+    if (data.containsKey('name')) {
+      _location = data['name']?.toString() ?? 'Không xác định';
+    }
+  }
+
+  // Extract int value from data
+  int _extractIntValue(
+      Map<String, dynamic> data,
+      String key,
+      int defaultValue,
+      ) {
+    if (!data.containsKey(key) || data[key] == null) return defaultValue;
+
+    if (data[key] is int) return data[key];
+    return int.tryParse(data[key].toString()) ?? defaultValue;
   }
 
   @override
@@ -123,49 +224,72 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
 
     try {
       final userId =
-          widget.userId.isEmpty
-              ? FirebaseAuth.instance.currentUser?.uid
-              : widget.userId;
+      widget.userId.isEmpty
+          ? FirebaseAuth.instance.currentUser?.uid
+          : widget.userId;
 
       if (userId == null) {
-        throw Exception("Người dùng chưa đăng nhập");
+        throw Exception("User not logged in");
       }
 
+      final String tripId = widget.review['trip_id'] ?? '';
+      final String locationId = widget.review['location_id'] ?? '';
+      final String seTripId = widget.review['se_trip_id'] ?? '';
+
+      if (tripId.isEmpty) {
+        throw Exception("Trip ID is missing");
+      }
+
+      // Thêm log để debug
+      print('Saving review with trip_id: $tripId, se_trip_id: $seTripId');
+
+      // Make sure we're using the correct IDs
+      final Map<String, dynamic> reviewData = {
+        'user_id': userId,
+        'trip_id': tripId,
+        'location_id': locationId,
+        'se_trip_id': seTripId,
+        'comment': commentController.text.trim(),
+        'votes': selectedRating,
+        'trip_details': {
+          'location': widget.review['location'] ?? 'Không xác định',
+          'duration': widget.review['duration'] ?? '',
+          'accommodation': widget.review['accommodation'] ?? 'Không xác định',
+          'price': widget.review['price'] ?? 0,
+          'people': widget.review['people'] ?? 1,
+          'activities': widget.review['activities'] ?? 0,
+          'meals': widget.review['meals'] ?? 0,
+          'imageUrl': widget.review['imageUrl'] ?? '',
+        },
+      };
+
       if (widget.isNewReview) {
-        // Tạo đánh giá mới
-        await FirebaseFirestore.instance.collection('reviews').add({
-          'user_id': userId,
-          'trip_id': widget.review['trip_id'],
-          'comment': commentController.text.trim(),
-          'votes': selectedRating,
-          'created_at': Timestamp.now(),
-        });
+        // Create new review with all necessary fields
+        reviewData['created_at'] = Timestamp.now();
+
+        await FirebaseFirestore.instance.collection('reviews').add(reviewData);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Đã thêm đánh giá thành công')),
         );
       } else {
-        // Cập nhật đánh giá hiện có
+        // Update existing review
+        reviewData['updated_at'] = Timestamp.now();
+
         await FirebaseFirestore.instance
             .collection('reviews')
             .doc(widget.review['id'])
-            .update({
-              'comment': commentController.text.trim(),
-              'votes': selectedRating,
-              'updated_at': Timestamp.now(),
-            });
+            .update(reviewData);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Đã cập nhật đánh giá thành công')),
         );
       }
 
-      Navigator.pop(
-        context,
-        true,
-      ); // Trở về màn hình trước với kết quả thành công
+      // Return success
+      Navigator.pop(context, true);
     } catch (e) {
-      print('Lỗi khi lưu đánh giá: $e');
+      print('Error saving review: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Đã xảy ra lỗi: $e')));
@@ -173,23 +297,6 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
       setState(() {
         _isSaving = false;
       });
-    }
-  }
-
-  String _ratingText(int rating) {
-    switch (rating) {
-      case 5:
-        return 'Tuyệt vời';
-      case 4:
-        return 'Rất tốt';
-      case 3:
-        return 'Tốt';
-      case 2:
-        return 'Tạm được';
-      case 1:
-        return 'Tệ';
-      default:
-        return '';
     }
   }
 
@@ -205,7 +312,7 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '${widget.review['location']} ${widget.review['duration']}',
+          '$_location $_duration',
           style: TextStyle(
             color: Color(MyColor.black),
             fontSize: 16,
@@ -224,89 +331,29 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body:
+      _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // Trip image
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child:
-                  tripDetails != null && tripDetails!['anh'] != null
-                      ? Image.network(
-                        tripDetails!['anh'],
-                        width: double.infinity,
-                        height: 200,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          print('Lỗi tải ảnh từ tripDetails: $error');
-                          // Thử lấy từ widget.review['imageUrl']
-                          return (widget.review['imageUrl'] != null &&
-                                  widget.review['imageUrl']
-                                      .toString()
-                                      .isNotEmpty &&
-                                  widget.review['imageUrl']
-                                      .toString()
-                                      .startsWith('http'))
-                              ? Image.network(
-                                widget.review['imageUrl'],
-                                width: double.infinity,
-                                height: 200,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  print(
-                                    'Lỗi tải ảnh từ review imageUrl: $error',
-                                  );
-                                  return Image.asset(
-                                    'assets/images/vungtau.png',
-                                    width: double.infinity,
-                                    height: 200,
-                                    fit: BoxFit.cover,
-                                  );
-                                },
-                              )
-                              : Image.asset(
-                                'assets/images/vungtau.png',
-                                width: double.infinity,
-                                height: 200,
-                                fit: BoxFit.cover,
-                              );
-                        },
-                      )
-                      : (widget.review['imageUrl'] != null &&
-                          widget.review['imageUrl'].toString().isNotEmpty &&
-                          widget.review['imageUrl'].toString().startsWith(
-                            'http',
-                          ))
-                      ? Image.network(
-                        widget.review['imageUrl'],
-                        width: double.infinity,
-                        height: 200,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          print('Lỗi tải ảnh từ review imageUrl: $error');
-                          return Image.asset(
-                            'assets/images/vungtau.png',
-                            width: double.infinity,
-                            height: 200,
-                            fit: BoxFit.cover,
-                          );
-                        },
-                      )
-                      : Image.asset(
-                        'assets/images/vungtau.png',
-                        width: double.infinity,
-                        height: 200,
-                        fit: BoxFit.cover,
-                      ),
+              child: _buildImageWidget(),
             ),
             const SizedBox(height: 12),
 
             Row(
               children: [
-                SvgPicture.asset('assets/icons/logo_avt.svg', height: 24),
+                SvgPicture.asset(
+                  'assets/icons/logo_avt.svg',
+                  height: 24,
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  '${widget.review['duration']}',
+                  _duration,
                   style: TextStyle(
                     fontSize: 16,
                     color: Color(MyColor.black),
@@ -317,118 +364,55 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
             ),
             const SizedBox(height: 12),
 
-            if (tripDetails != null)
-              Container(
-                decoration: BoxDecoration(
-                  color: Color(MyColor.pr1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Hoạt động: ${tripDetails!['so_act'] ?? 0}',
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Nơi ở: ${tripDetails!['noi_o'] ?? "Không có"}',
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text('Bữa ăn: ${tripDetails!['so_eat'] ?? 0}'),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Chi phí: ${tripDetails!['chi_phi'] ?? 0}đ',
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Số người: ${tripDetails!['so_nguoi'] ?? 1}',
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Số ngày: ${tripDetails!['so_ngay'] ?? 0}',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              )
-            else
-              Container(
-                decoration: BoxDecoration(
-                  color: Color(MyColor.pr1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Hoạt động: ${widget.review['activities'] ?? 15}',
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Nơi ở: ${widget.review['accommodation'] ?? "Không có"}',
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text('Bữa ăn: ${widget.review['meals'] ?? 9}'),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Chi phí: ${widget.review['price'] ?? 0}đ',
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Số người: ${widget.review['people'] ?? 1}',
-                          ),
-                        ),
-                        const Expanded(child: Text('')),
-                      ],
-                    ),
-                  ],
-                ),
+            // Trip details
+            Container(
+              decoration: BoxDecoration(
+                color: Color(MyColor.pr1),
+                borderRadius: BorderRadius.circular(8),
               ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: Text('Hoạt động: $_activities')),
+                      Expanded(child: Text('Nơi ở: $_accommodation')),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(child: Text('Bữa ăn: $_meals')),
+                      Expanded(child: Text('Chi phí: ${_price}đ')),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(child: Text('Số người: $_people')),
+                      const Expanded(child: Text('')),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
 
+            // Rating selection
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Chất lượng',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 Text(
                   _ratingText(selectedRating),
-                  style: TextStyle(color: Color(MyColor.pr5), fontSize: 14),
+                  style: TextStyle(
+                    color: Color(MyColor.pr5),
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -446,14 +430,16 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
                     Icons.star,
                     size: 32,
                     color:
-                        index < selectedRating
-                            ? Colors.amber
-                            : Color(MyColor.grey),
+                    index < selectedRating
+                        ? Colors.amber
+                        : Color(MyColor.grey),
                   ),
                 );
               }),
             ),
             const SizedBox(height: 16),
+
+            // Comment input
             Container(
               decoration: BoxDecoration(
                 border: Border.all(color: Color(MyColor.grey)),
@@ -470,6 +456,8 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
               ),
             ),
             const SizedBox(height: 24),
+
+            // Submit button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -484,14 +472,44 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
                   ),
                 ),
                 child:
-                    _isSaving
-                        ? CircularProgressIndicator(color: Color(MyColor.pr5))
-                        : const Text('Gửi đánh giá'),
+                _isSaving
+                    ? CircularProgressIndicator(
+                  color: Color(MyColor.pr5),
+                )
+                    : const Text('Gửi đánh giá'),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  // Build image widget
+  Widget _buildImageWidget() {
+    if (_imageUrl.startsWith('http')) {
+      return Image.network(
+        _imageUrl,
+        width: double.infinity,
+        height: 200,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          print('Error loading image: $error');
+          return Image.asset(
+            'assets/images/vungtau.png',
+            width: double.infinity,
+            height: 200,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        'assets/images/vungtau.png',
+        width: double.infinity,
+        height: 200,
+        fit: BoxFit.cover,
+      );
+    }
   }
 }

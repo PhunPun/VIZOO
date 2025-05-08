@@ -1,15 +1,18 @@
-// lib/pages/profile/pages/review_list_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/trip_review_widget.dart';
 import 'package:vizoo_frontend/pages/profile/pages/edit_reviews_screen.dart';
 import 'package:vizoo_frontend/pages/profile/widgets/trip_reviews_card.dart';
+import '../widgets/trip_data_service.dart';
+import './other_reviews_screen.dart';
 
 class ReviewListView extends StatefulWidget {
-  const ReviewListView({super.key});
+  final String? se_tripID;
+  const ReviewListView({
+    this.se_tripID,
+    super.key});
 
   @override
   State<ReviewListView> createState() => _ReviewListViewState();
@@ -19,11 +22,24 @@ class _ReviewListViewState extends State<ReviewListView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final TripDataService _tripService = TripDataService();
+
+  // Cờ kiểm soát việc tải dữ liệu
+  bool _loadingMyReviews = false;
+  bool _loadingPendingReviews = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Lắng nghe sự kiện thay đổi tab để tải dữ liệu theo yêu cầu
+    _tabController.addListener(() {
+      // Chỉ tải dữ liệu khi tab thay đổi và hiển thị
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -92,12 +108,10 @@ class _ReviewListViewState extends State<ReviewListView>
   }
 
   Widget _buildMyReviewsTab() {
-    return FutureBuilder<QuerySnapshot>(
-      future:
-          FirebaseFirestore.instance
-              .collection('reviews')
-              .where('user_id', isEqualTo: currentUserId)
-              .get(),
+    _tripService.clearCache();
+    // Sử dụng FutureBuilder để tải dữ liệu khi tab được hiển thị
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _tripService.getUserReviews(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -107,7 +121,7 @@ class _ReviewListViewState extends State<ReviewListView>
           return Center(child: Text('Đã xảy ra lỗi: ${snapshot.error}'));
         }
 
-        final reviewDocs = snapshot.data?.docs ?? [];
+        final reviewDocs = snapshot.data ?? [];
 
         if (reviewDocs.isEmpty) {
           return Center(
@@ -133,11 +147,16 @@ class _ReviewListViewState extends State<ReviewListView>
           padding: const EdgeInsets.all(16),
           itemCount: reviewDocs.length,
           itemBuilder: (context, index) {
-            final reviewData = reviewDocs[index].data() as Map<String, dynamic>;
-            final reviewId = reviewDocs[index].id;
+            final reviewData = reviewDocs[index];
+            final reviewId = reviewData['id'] as String;
             final tripId = reviewData['trip_id'] as String? ?? '';
 
-            return TripReviewWidget(tripId: tripId, reviewId: reviewId);
+            // Hiển thị đánh giá qua widget TripReviewWidget
+            return TripReviewWidget(
+              tripId: tripId,
+              reviewId: reviewId,
+              showOtherReviews: true, // Cho phép xem đánh giá khác
+            );
           },
         );
       },
@@ -145,8 +164,10 @@ class _ReviewListViewState extends State<ReviewListView>
   }
 
   Widget _buildPendingReviewsTab() {
+    _tripService.clearCache();
+    // Tải danh sách chuyến đi cần đánh giá
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _fetchPendingReviews(),
+      future: _tripService.getPendingReviews(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -190,144 +211,11 @@ class _ReviewListViewState extends State<ReviewListView>
     );
   }
 
-  Future<List<Map<String, dynamic>>> _fetchPendingReviews() async {
-    if (currentUserId.isEmpty) return [];
-
-    try {
-      // Get completed trips (check = 1) for the user
-      final userTripsSnapshot =
-          await FirebaseFirestore.instance
-              .collection('user_trip')
-              .where('user_id', isEqualTo: currentUserId)
-              .where('check', isEqualTo: 1) // Completed
-              .get();
-
-      List<String> completedTripIds =
-          userTripsSnapshot.docs
-              .map((doc) => doc.data()['trip_id'] as String? ?? '')
-              .where((id) => id.isNotEmpty)
-              .toList();
-
-      // Get existing reviews
-      final existingReviewsSnapshot =
-          await FirebaseFirestore.instance
-              .collection('reviews')
-              .where('user_id', isEqualTo: currentUserId)
-              .get();
-
-      // Filter trip_ids that already have reviews
-      List<String> reviewedTripIds =
-          existingReviewsSnapshot.docs
-              .map((doc) => doc.data()['trip_id'] as String? ?? '')
-              .where((id) => id.isNotEmpty)
-              .toList();
-
-      // Filter trips that haven't been reviewed
-      List<String> pendingTripIds =
-          completedTripIds
-              .where((tripId) => !reviewedTripIds.contains(tripId))
-              .toList();
-
-      List<Map<String, dynamic>> pendingReviews = [];
-
-      // Get all locations
-      final locationDocs =
-          await FirebaseFirestore.instance.collection('dia_diem').get();
-
-      // Tạo danh sách location để tra cứu
-      final locations = Map.fromEntries(
-        locationDocs.docs.map((doc) => MapEntry(doc.id, doc.data())),
-      );
-
-      for (var tripId in pendingTripIds) {
-        // Tìm trip trong tất cả các location
-        Map<String, dynamic>? tripData;
-        Map<String, dynamic>? locationData;
-        String? locationId;
-
-        for (var location in locations.entries) {
-          final locId = location.key;
-          final locData = location.value;
-
-          final tripSnapshot =
-              await FirebaseFirestore.instance
-                  .collection('dia_diem')
-                  .doc(locId)
-                  .collection('trips')
-                  .doc(tripId)
-                  .get();
-
-          if (tripSnapshot.exists) {
-            tripData = tripSnapshot.data();
-            locationData = locData;
-            locationId = locId;
-            break;
-          }
-        }
-
-        if (tripData != null && locationData != null && locationId != null) {
-          // Handle dates
-          Timestamp? startDateTimestamp =
-              tripData['ngay_bat_dau'] as Timestamp?;
-          int soDays =
-              tripData['so_ngay'] is int
-                  ? tripData['so_ngay'] as int
-                  : int.tryParse(tripData['so_ngay'].toString()) ?? 0;
-
-          // Calculate completion date
-          String completionDate = 'Không xác định';
-          if (startDateTimestamp != null && soDays > 0) {
-            try {
-              DateTime startDate = startDateTimestamp.toDate();
-              DateTime endDate = startDate.add(Duration(days: soDays));
-              completionDate =
-                  '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
-            } catch (e) {
-              print('Error calculating completion date: $e');
-            }
-          }
-
-          // Create pending review object
-          Map<String, dynamic> pendingReview = {
-            'trip_id': tripId,
-            'location_id': locationId,
-            'location': locationData['ten'] ?? 'Không xác định',
-            'duration': '$soDays ngày ${soDays > 1 ? (soDays - 1) : 0} đêm',
-            'completion_date': completionDate,
-            // Sử dụng đúng trường hình ảnh
-            'imageUrl':
-                tripData['anh'] ??
-                locationData['hinh_anh1'] ??
-                'assets/images/vungtau.png',
-            'rating': 0,
-            'comment': '',
-            'accommodation': tripData['noi_o'] ?? 'Không xác định',
-            'price': tripData['chi_phi'] ?? 0,
-            'people': tripData['so_nguoi'] ?? 1,
-            'activities': tripData['so_act'] ?? 0,
-            'meals': tripData['so_eat'] ?? 0,
-            'userTripDocId':
-                userTripsSnapshot.docs
-                    .firstWhere((doc) => doc.data()['trip_id'] == tripId)
-                    .id,
-          };
-
-          pendingReviews.add(pendingReview);
-        }
-      }
-
-      return pendingReviews;
-    } catch (e) {
-      print('Error fetching pending reviews: $e');
-      return [];
-    }
-  }
-
   Widget _buildPendingReviewCard(
-    BuildContext context,
-    Map<String, dynamic> trip,
-  ) {
-    // Action buttons
+      BuildContext context,
+      Map<String, dynamic> trip,
+      ) {
+    // Nút thao tác
     final List<Widget> actionButtons = [
       ElevatedButton(
         onPressed: () {
@@ -342,44 +230,110 @@ class _ReviewListViewState extends State<ReviewListView>
       ),
     ];
 
-    // Extra content
-    final Widget extraContent = Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(
-        'Bạn đã hoàn thành chuyến đi này vào ngày ${trip['completion_date']}',
-        style: TextStyle(
-          fontStyle: FontStyle.italic,
-          color: Color(MyColor.pr4),
-        ),
-      ),
-    );
+    // Sử dụng FutureBuilder để tải đánh giá trung bình nếu cần
+    return FutureBuilder<double>(
+      future: _tripService.getTripAverageRating(trip['trip_id']),
+      builder: (context, ratingSnapshot) {
+        // Widget hiển thị thông tin đánh giá trung bình
+        Widget ratingWidget = const SizedBox.shrink();
 
-    return TripDisplayCard(
-      trip: trip,
-      statusText: 'Chưa đánh giá',
-      statusColor: Color(MyColor.pr4),
-      borderColor: Color(MyColor.pr3),
-      actionButtons: actionButtons,
-      extraContent: extraContent,
+        // Hiển thị đánh giá trung bình nếu có
+        if (ratingSnapshot.connectionState == ConnectionState.done &&
+            !ratingSnapshot.hasError &&
+            ratingSnapshot.data != null &&
+            ratingSnapshot.data! > 0) {
+          ratingWidget = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Text(
+                    'Đánh giá trung bình: ',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${ratingSnapshot.data!.toStringAsFixed(1)}',
+                    style: TextStyle(
+                      color: Color(MyColor.pr5),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.star, color: Colors.amber, size: 16),
+                ],
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => OtherReviewsScreen(
+                        tripId: trip['trip_id'],
+                        locationName: trip['location'],
+                        tripDuration: trip['duration'],
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.reviews, size: 16),
+                label: const Text('Xem đánh giá khác'),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  foregroundColor: Color(MyColor.pr4),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          );
+        }
+
+        // Widget nội dung bổ sung
+        final Widget extraContent = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bạn đã hoàn thành chuyến đi này vào ngày ${trip['completion_date']}',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Color(MyColor.pr4),
+              ),
+            ),
+            ratingWidget,
+          ],
+        );
+
+        return TripDisplayCard(
+          trip: trip,
+          statusText: 'Chưa đánh giá',
+          statusColor: Color(MyColor.pr4),
+          borderColor: Color(MyColor.pr3),
+          actionButtons: actionButtons,
+          extraContent: extraContent,
+        );
+      },
     );
   }
 
   void _navigateToCreateReview(
-    BuildContext context,
-    Map<String, dynamic> trip,
-  ) {
+      BuildContext context,
+      Map<String, dynamic> trip,
+      ) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder:
             (context) => EditReviewScreen(
-              review: trip,
-              isNewReview: true,
-              userId: currentUserId,
-            ),
+          review: trip,
+          isNewReview: true,
+          userId: currentUserId,
+        ),
       ),
     ).then((_) {
-      setState(() {});
+      setState(() {}); // Làm mới trang sau khi quay lại
     });
   }
 }

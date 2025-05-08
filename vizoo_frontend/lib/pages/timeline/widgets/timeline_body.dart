@@ -43,8 +43,6 @@ class _TimelineBodyState extends State<TimelineBody> {
   // Lưu trạng thái chuyến đi của người dùng hiện tại (0: đang áp dụng, 1: hoàn thành, 2: đã hủy)
   int? userTripStatus;
   String? userTripDocId;
-  int ? check;
-
 
   // Kiểm tra tất cả các mốc thời gian đã hoàn thành chưa
   bool allActivitiesCompleted = false;
@@ -77,11 +75,11 @@ class _TimelineBodyState extends State<TimelineBody> {
         se_tripId = widget.se_tripId;
       } else {
         final newDocRef =
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('selected_trips')
-            .doc();
+            FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('selected_trips')
+                .doc();
 
         _userTripRef = newDocRef;
         se_tripId = newDocRef.id;
@@ -109,7 +107,6 @@ class _TimelineBodyState extends State<TimelineBody> {
               locationId: widget.locationId,
             );
             initDate = tripData!.ngayBatDau;
-            check=tripData!.check;
           });
           return;
         }
@@ -127,7 +124,6 @@ class _TimelineBodyState extends State<TimelineBody> {
             locationId: widget.locationId,
           );
           initDate = tripData!.ngayBatDau;
-          check=tripData!.check;
         });
       }
     } catch (e) {
@@ -179,253 +175,125 @@ class _TimelineBodyState extends State<TimelineBody> {
 
     // Kiểm tra các điều kiện logic
     // Không cho phép quay lại trạng thái "áp dụng" nếu đã hoàn thành
-    if (widget.se_tripId == null) {
-      if (userTripStatus == 1 && newStatus == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Không thể quay lại trạng thái đang áp dụng sau khi đã hoàn thành.'
-                  ' Vui lòng sử dụng "Áp dụng lại" để bắt đầu mới.',
-            ),
-            duration: Duration(seconds: 3),
+    if (userTripStatus == 1 && newStatus == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Không thể quay lại trạng thái đang áp dụng sau khi đã hoàn thành.'
+            ' Vui lòng sử dụng "Áp dụng lại" để bắt đầu mới.',
           ),
-        );
-        return;
-      }
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
 
-      // Kiểm tra các điều kiện trước khi cập nhật trạng thái
-      if (newStatus == 1 && !allActivitiesCompleted) {
-        // Nếu muốn hoàn thành chuyến đi nhưng chưa hoàn thành tất cả hoạt động
-        showDialog(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-            title: const Text('Chưa hoàn thành'),
-            content: const Text(
-              'Bạn cần hoàn thành tất cả các hoạt động trong lịch trình trước khi đánh dấu chuyến đi là hoàn thành.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Đã hiểu'),
+    // Kiểm tra các điều kiện trước khi cập nhật trạng thái
+    if (newStatus == 1 && !allActivitiesCompleted) {
+      // Nếu muốn hoàn thành chuyến đi nhưng chưa hoàn thành tất cả hoạt động
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: const Text('Chưa hoàn thành'),
+              content: const Text(
+                'Bạn cần hoàn thành tất cả các hoạt động trong lịch trình trước khi đánh dấu chuyến đi là hoàn thành.',
               ),
-            ],
-          ),
-        );
-        return;
-      }
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Đã hiểu'),
+                ),
+              ],
+            ),
+      );
+      return;
+    }
 
-      setState(() {
-        isLoading = true;
-      });
+    setState(() {
+      isLoading = true;
+    });
 
-      try {
-        final Timestamp now = Timestamp.now();
-        final usersCol = FirebaseFirestore.instance.collection('users');
+    try {
+      final Timestamp now = Timestamp.now();
+      final usersCol = FirebaseFirestore.instance.collection('users');
 
-        // Cập nhật dữ liệu chung cho cả 2 trường hợp
-        final updateData = {
-          'check': newStatus,
-          'trip_id': widget.se_tripId,
-          'updated_at': now,
-          'status': newStatus == 0, // status = true chỉ khi đang áp dụng (0)
-        };
+      // Cập nhật dữ liệu chung cho cả 2 trường hợp
+      final updateData = {
+        'check': newStatus,
+        'updated_at': now,
+        'status': newStatus == 0, // status = true chỉ khi đang áp dụng (0)
+      };
 
-        if (userTripDocId != null) {
-          // Cập nhật user_trip và selected_trips đồng thời
-          await Future.wait([
-            FirebaseFirestore.instance
-                .collection('user_trip')
-                .doc(userTripDocId)
-                .update(updateData),
-
-            usersCol
-                .doc(currentUserId)
-                .collection('selected_trips')
-                .doc(widget.se_tripId)
-                .set(updateData, SetOptions(merge: true)),
-          ]);
-        } else {
-          // Tạo mới và đồng bộ dữ liệu
-          final docRef = await FirebaseFirestore.instance
+      if (userTripDocId != null) {
+        // Cập nhật user_trip và selected_trips đồng thời
+        await Future.wait([
+          FirebaseFirestore.instance
               .collection('user_trip')
-              .add({
-            'user_id': currentUserId,
-            'se_trip_id': widget.se_tripId,
-            ...updateData,
-            'created_at': now,
-          });
+              .doc(userTripDocId)
+              .update(updateData),
 
-          await usersCol
+          usersCol
               .doc(currentUserId)
               .collection('selected_trips')
-              .doc(widget.se_tripId)
-              .update({'check': newStatus, 'status': newStatus = 0});
+              .doc()
+              .set(updateData, SetOptions(merge: true)),
+        ]);
+      } else {
+        // Tạo mới và đồng bộ dữ liệu
+        final docRef = await FirebaseFirestore.instance
+            .collection('user_trip')
+            .add({
+              'user_id': currentUserId,
+              'trip_id': widget.tripId,
+              ...updateData,
+              'created_at': now,
+            });
 
-          setState(() => userTripDocId = docRef.id);
-        }
+        await usersCol
+            .doc(currentUserId)
+            .collection('selected_trips')
+            .doc(widget.tripId)
+            .set(updateData, SetOptions(merge: true));
 
-        setState(() => userTripStatus = newStatus);
-
-        String statusText = '';
-        switch (newStatus) {
-          case 0:
-            statusText = 'đang áp dụng';
-            break;
-          case 1:
-            statusText = 'đã hoàn thành';
-            break;
-          case 2:
-            statusText = 'đã hủy';
-            break;
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Chuyến đi đã được cập nhật thành $statusText'),
-          ),
-        );
-
-        // Nếu đã hoàn thành (1), yêu cầu đánh giá
-        if (newStatus == 1) {
-          await _navigateToReview(newStatus);
-          // Cập nhật lại trạng thái đánh giá
-          await checkIfReviewed();
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi cập nhật trạng thái: $e')),
-        );
-      } finally {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } else {
-      if (userTripStatus == 1 && newStatus == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Không thể quay lại trạng thái đang áp dụng sau khi đã hoàn thành.'
-                  ' Vui lòng sử dụng "Áp dụng lại" để bắt đầu mới.',
-            ),
-            duration: Duration(seconds: 3),
-          ),
-        );
-        return;
+        setState(() => userTripDocId = docRef.id);
       }
 
-      // Kiểm tra các điều kiện trước khi cập nhật trạng thái
-      if (newStatus == 1 && !allActivitiesCompleted) {
-        // Nếu muốn hoàn thành chuyến đi nhưng chưa hoàn thành tất cả hoạt động
-        showDialog(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-            title: const Text('Chưa hoàn thành'),
-            content: const Text(
-              'Bạn cần hoàn thành tất cả các hoạt động trong lịch trình trước khi đánh dấu chuyến đi là hoàn thành.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Đã hiểu'),
-              ),
-            ],
-          ),
-        );
-        return;
+      setState(() => userTripStatus = newStatus);
+
+      String statusText = '';
+      switch (newStatus) {
+        case 0:
+          statusText = 'đang áp dụng';
+          break;
+        case 1:
+          statusText = 'đã hoàn thành';
+          break;
+        case 2:
+          statusText = 'đã hủy';
+          break;
       }
 
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Chuyến đi đã được cập nhật thành $statusText')),
+      );
+
+      // Nếu đã hoàn thành (1), yêu cầu đánh giá
+      if (newStatus == 1) {
+        await _navigateToReview(newStatus);
+        // Cập nhật lại trạng thái đánh giá
+        await checkIfReviewed();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi cập nhật trạng thái: $e')),
+      );
+    } finally {
       setState(() {
-        isLoading = true;
+        isLoading = false;
       });
-
-      try {
-        final Timestamp now = Timestamp.now();
-        final usersCol = FirebaseFirestore.instance.collection('users');
-
-        // Cập nhật dữ liệu chung cho cả 2 trường hợp
-        final updateData = {
-          'check': newStatus,
-          'updated_at': now,
-          'status': newStatus == 0, // status = true chỉ khi đang áp dụng (0)
-        };
-
-        if (userTripDocId != null) {
-          // Cập nhật user_trip và selected_trips đồng thời
-          await Future.wait([
-            FirebaseFirestore.instance
-                .collection('user_trip')
-                .doc(userTripDocId)
-                .update(updateData),
-
-            usersCol
-                .doc(currentUserId)
-                .collection('selected_trips')
-                .doc(widget.se_tripId)
-                .set(updateData, SetOptions(merge: true)),
-          ]);
-        } else {
-          // Tạo mới và đồng bộ dữ liệu
-          final docRef = await FirebaseFirestore.instance
-              .collection('user_trip')
-              .add({
-            'user_id': currentUserId,
-            'se_trip_id': widget.se_tripId,
-            ...updateData,
-            'created_at': now,
-          });
-
-          await usersCol
-              .doc(currentUserId)
-              .collection('selected_trips')
-              .doc(widget.se_tripId)
-              .update({'check': newStatus, 'status': newStatus = 0});
-
-          setState(() => userTripDocId = docRef.id);
-        }
-
-        setState(() => userTripStatus = newStatus);
-
-        String statusText = '';
-        switch (newStatus) {
-          case 0:
-            statusText = 'đang áp dụng';
-            break;
-          case 1:
-            statusText = 'đã hoàn thành';
-            break;
-          case 2:
-            statusText = 'đã hủy';
-            break;
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Chuyến đi đã được cập nhật thành $statusText'),
-          ),
-        );
-
-        // Nếu đã hoàn thành (1), yêu cầu đánh giá
-        if (newStatus == 1) {
-          await _navigateToReview(newStatus);
-          // Cập nhật lại trạng thái đánh giá
-          await checkIfReviewed();
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi cập nhật trạng thái: $e')),
-        );
-      } finally {
-        setState(() {
-          isLoading = false;
-        });
-      }
     }
   }
 
@@ -454,53 +322,50 @@ class _TimelineBodyState extends State<TimelineBody> {
   Future<void> _loadUserTripStatus() async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
-    if(widget.se_tripId != null){
-      try {
-        final userTripQuery =
-        await FirebaseFirestore.instance
-            .collection('user_trip')
-            .where('user_id', isEqualTo: currentUserId)
-            .where('se_trip_id', isEqualTo: widget.se_tripId)
-            .limit(1)
-            .get();
 
-        if (userTripQuery.docs.isNotEmpty) {
-          final userTripDoc = userTripQuery.docs.first;
+    try {
+      final userTripQuery =
+          await FirebaseFirestore.instance
+              .collection('user_trip')
+              .where('user_id', isEqualTo: currentUserId)
+              .where('trip_id', isEqualTo: widget.tripId)
+              .limit(1)
+              .get();
+
+      if (userTripQuery.docs.isNotEmpty) {
+        final userTripDoc = userTripQuery.docs.first;
+        setState(() {
+          userTripDocId = userTripDoc.id;
+          userTripStatus = userTripDoc.data()['check'] as int? ?? 0;
+          _useUserData = true;
+        });
+        print(
+          'Found user trip with status: $userTripStatus, docId: $userTripDocId',
+        );
+        return;
+      }
+
+      // If not found in user_trip, check selected_trips
+      if (currentUserId != null) {
+        final selectedTripRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserId)
+            .collection('selected_trips')
+            .doc(widget.se_tripId);
+
+        final selectedTripSnap = await selectedTripRef.get();
+
+        if (selectedTripSnap.exists) {
+          final checkValue = selectedTripSnap.data()?['check'] as int?;
           setState(() {
-            userTripDocId = userTripDoc.id;
-            userTripStatus = userTripDoc.data()['check'] as int? ?? 0;
+            userTripStatus = checkValue;
             _useUserData = true;
           });
-          print(
-            'Found user trip with status: $userTripStatus, docId: $widget.se_tripId',
-          );
-          return;
+          print('Found selected trip with status: $userTripStatus');
         }
-
-        // If not found in user_trip, check selected_trips
-        if (currentUserId != null) {
-          final selectedTripRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(currentUserId)
-              .collection('selected_trips')
-              .doc(widget.se_tripId);
-
-          final selectedTripSnap = await selectedTripRef.get();
-
-          if (selectedTripSnap.exists) {
-            final checkValue = selectedTripSnap.data()?['check'] as int?;
-            setState(() {
-              userTripStatus = checkValue;
-              _useUserData = true;
-            });
-            print('Found selected trip with status: $userTripStatus');
-          }
-
-        }
-
-      } catch (e) {
-        print('Error loading user trip status: $e');
       }
+    } catch (e) {
+      print('Error loading user trip status: $e');
     }
   }
 
@@ -531,14 +396,14 @@ class _TimelineBodyState extends State<TimelineBody> {
       int completedCount = 0;
 
       final timelinesSnap =
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('selected_trips')
-          .doc(widget.se_tripId)
-          .collection('timelines')
-          .where('day_number', whereIn: days)
-          .get();
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .collection('selected_trips')
+              .doc(widget.se_tripId)
+              .collection('timelines')
+              .where('day_number', whereIn: days)
+              .get();
 
       for (var tlDoc in timelinesSnap.docs) {
         final scheduleSnap = await tlDoc.reference.collection('schedule').get();
@@ -579,10 +444,10 @@ class _TimelineBodyState extends State<TimelineBody> {
     if (tripData == null) return;
 
     final locationSnapshot =
-    await FirebaseFirestore.instance
-        .collection('dia_diem')
-        .doc(widget.locationId)
-        .get();
+        await FirebaseFirestore.instance
+            .collection('dia_diem')
+            .doc(widget.locationId)
+            .get();
 
     if (!locationSnapshot.exists) return;
 
@@ -594,7 +459,7 @@ class _TimelineBodyState extends State<TimelineBody> {
       'trip_id': widget.tripId,
       'location': locationName,
       'duration':
-      '${tripData!.soNgay} ngày ${tripData!.soNgay > 1 ? (tripData!.soNgay - 1) : 0} đêm',
+          '${tripData!.soNgay} ngày ${tripData!.soNgay > 1 ? (tripData!.soNgay - 1) : 0} đêm',
       'rating': 0,
       'comment': '',
       'imageUrl': locationData['hinh_anh1'] ?? 'assets/images/vungtau.png',
@@ -606,11 +471,11 @@ class _TimelineBodyState extends State<TimelineBody> {
     // Kiểm tra nếu người dùng đã có đánh giá cho chuyến đi này
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final existingReviewSnapshot =
-    await FirebaseFirestore.instance
-        .collection('reviews')
-        .where('user_id', isEqualTo: currentUserId)
-        .where('trip_id', isEqualTo: widget.tripId)
-        .get();
+        await FirebaseFirestore.instance
+            .collection('reviews')
+            .where('user_id', isEqualTo: currentUserId)
+            .where('trip_id', isEqualTo: widget.tripId)
+            .get();
 
     // Nếu người dùng đã hoàn thành chuyến đi, hỏi xem có muốn đánh giá ngay không
     if (tripStatus == 1 && existingReviewSnapshot.docs.isEmpty) {
@@ -619,29 +484,29 @@ class _TimelineBodyState extends State<TimelineBody> {
             context: context,
             builder:
                 (context) => AlertDialog(
-              title: const Text('Đánh giá chuyến đi'),
-              content: const Text(
-                'Bạn đã hoàn thành chuyến đi! Bạn có muốn đánh giá ngay không?',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text(
-                    'Để sau',
-                    style: TextStyle(color: Color(MyColor.pr3)),
+                  title: const Text('Đánh giá chuyến đi'),
+                  content: const Text(
+                    'Bạn đã hoàn thành chuyến đi! Bạn có muốn đánh giá ngay không?',
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text(
+                        'Để sau',
+                        style: TextStyle(color: Color(MyColor.pr3)),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text(
+                        'Đánh giá ngay',
+                        style: TextStyle(color: Color(MyColor.pr5)),
+                      ),
+                    ),
+                  ],
                 ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text(
-                    'Đánh giá ngay',
-                    style: TextStyle(color: Color(MyColor.pr5)),
-                  ),
-                ),
-              ],
-            ),
           ) ??
-              false;
+          false;
 
       if (shouldReview) {
         await Navigator.push(
@@ -649,10 +514,10 @@ class _TimelineBodyState extends State<TimelineBody> {
           MaterialPageRoute(
             builder:
                 (context) => EditReviewScreen(
-              review: reviewData,
-              isNewReview: true,
-              userId: currentUserId,
-            ),
+                  review: reviewData,
+                  isNewReview: true,
+                  userId: currentUserId,
+                ),
           ),
         );
 
@@ -669,12 +534,12 @@ class _TimelineBodyState extends State<TimelineBody> {
 
     try {
       final reviewSnapshot =
-      await FirebaseFirestore.instance
-          .collection('reviews')
-          .where('user_id', isEqualTo: currentUserId)
-          .where('trip_id', isEqualTo: widget.tripId)
-          .limit(1)
-          .get();
+          await FirebaseFirestore.instance
+              .collection('reviews')
+              .where('user_id', isEqualTo: currentUserId)
+              .where('trip_id', isEqualTo: widget.tripId)
+              .limit(1)
+              .get();
 
       setState(() {
         hasReview = reviewSnapshot.docs.isNotEmpty;
@@ -692,15 +557,15 @@ class _TimelineBodyState extends State<TimelineBody> {
   Future<void> _fetchDayNumbers() async {
     try {
       final baseRef =
-      (_useUserData && _userTripRef != null)
-          ? _userTripRef!
-          : _masterTripRef;
+          (_useUserData && _userTripRef != null)
+              ? _userTripRef!
+              : _masterTripRef;
 
       final snap =
-      await baseRef.collection('timelines').orderBy('day_number').get();
+          await baseRef.collection('timelines').orderBy('day_number').get();
 
       final fetchedDays =
-      snap.docs.map((d) => (d.data()['day_number'] as int)).toList();
+          snap.docs.map((d) => (d.data()['day_number'] as int)).toList();
 
       if (!mounted) return;
       setState(() {
@@ -753,12 +618,12 @@ class _TimelineBodyState extends State<TimelineBody> {
         final actId = doc.data()['act_id'] as String?;
         if (actId == null) continue;
         final actDoc =
-        await FirebaseFirestore.instance
-            .collection('dia_diem')
-            .doc(widget.locationId)
-            .collection('activities')
-            .doc(actId)
-            .get();
+            await FirebaseFirestore.instance
+                .collection('dia_diem')
+                .doc(widget.locationId)
+                .collection('activities')
+                .doc(actId)
+                .get();
         if (actDoc.exists && actDoc.data()?['categories'] == 'eat') {
           count++;
         }
@@ -787,29 +652,29 @@ class _TimelineBodyState extends State<TimelineBody> {
           context: context,
           builder:
               (context) => AlertDialog(
-            title: const Text('Áp dụng lại'),
-            content: const Text(
-              'Bạn có chắc chắn muốn áp dụng lại chuyến đi này? Tất cả tiến độ sẽ được làm mới.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text(
-                  'Hủy',
-                  style: TextStyle(color: Color(MyColor.pr3)),
+                title: const Text('Áp dụng lại'),
+                content: const Text(
+                  'Bạn có chắc chắn muốn áp dụng lại chuyến đi này? Tất cả tiến độ sẽ được làm mới.',
                 ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text(
+                      'Hủy',
+                      style: TextStyle(color: Color(MyColor.pr3)),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text(
+                      'Xác nhận',
+                      style: TextStyle(color: Color(MyColor.pr5)),
+                    ),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text(
-                  'Xác nhận',
-                  style: TextStyle(color: Color(MyColor.pr5)),
-                ),
-              ),
-            ],
-          ),
         ) ??
-            false;
+        false;
 
     if (!confirm) return;
 
@@ -825,10 +690,10 @@ class _TimelineBodyState extends State<TimelineBody> {
       await Future.wait(
         timelines.docs.map((timeline) async {
           final schedules =
-          await timeline.reference.collection('schedule').get();
+              await timeline.reference.collection('schedule').get();
           await Future.wait(
             schedules.docs.map(
-                  (schedule) => schedule.reference.update({'status': false}),
+              (schedule) => schedule.reference.update({'status': false}),
             ),
           );
         }),
@@ -869,12 +734,12 @@ class _TimelineBodyState extends State<TimelineBody> {
 
       // 2. Tạo document mới (ID tự sinh)
       final newTripRef =
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('selected_trips')
-          .doc(); // mới
-      se_tripId = newTripRef.id;
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .collection('selected_trips')
+              .doc(); // mới
+        se_tripId = newTripRef.id;
       // 3. Sao chép dữ liệu gốc
       await newTripRef.set({
         ...originalSnap.data()!,
@@ -900,7 +765,7 @@ class _TimelineBodyState extends State<TimelineBody> {
 
         // copy schedule bên trong timeline đó
         final scheduleSnap =
-        await timelineDoc.reference.collection('schedule').get();
+            await timelineDoc.reference.collection('schedule').get();
         for (final scheduleDoc in scheduleSnap.docs) {
           await newTimelineRef.collection('schedule').doc(scheduleDoc.id).set({
             ...scheduleDoc.data(),
@@ -922,13 +787,12 @@ class _TimelineBodyState extends State<TimelineBody> {
         userTripStatus = 0;
         allActivitiesCompleted = false;
       });
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => HomePage(se_tripId: se_tripId)),
-      );
+        Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => HomePage(se_tripId: se_tripId)),
+    );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã thiết lập lại chuyến đi thành công!')),
       );
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi khi thiết lập lại: ${e.toString()}')),
@@ -962,33 +826,43 @@ class _TimelineBodyState extends State<TimelineBody> {
       }
       // Kiểm tra xem đã có trip nào đang active chưa
       final activeTrips =
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('selected_trips')
-          .where('status', isEqualTo: true)
-          .get();
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('selected_trips')
+              .where('status', isEqualTo: true)
+              .get();
       if (activeTrips.docs.isNotEmpty) {
         showDialog(
           context: context,
           builder:
               (context) => AlertDialog(
-            title: const Text('Đang có chuyến đi hoạt động'),
-            content: const Text(
-              'Bạn đang có một chuyến đi chưa hoàn thành. '
+                title: const Text('Đang có chuyến đi hoạt động'),
+                content: const Text(
+                  'Bạn đang có một chuyến đi chưa hoàn thành. '
                   'Vui lòng hoàn thành hoặc hủy chuyến đi hiện tại trước khi áp dụng mới.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Đã hiểu'),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Đã hiểu'),
+                  ),
+                ],
               ),
-            ],
-          ),
         );
         return;
       }
 
+      // Tạo mới bản ghi user_trip với trạng thái mặc định là đang áp dụng (0)
+      final docRef = await FirebaseFirestore.instance
+          .collection('user_trip')
+          .add({
+            'user_id': currentUserId,
+            'se_trip_id': widget.se_tripId,
+            'check': 0,
+            'created_at': now,
+            'updated_at': now,
+          });
       //Cập nhật user document trong selected_trips
       // Lấy dữ liệu gốc từ master trip
       if (widget.se_tripId == null || widget.se_tripId == "") {
@@ -1000,14 +874,13 @@ class _TimelineBodyState extends State<TimelineBody> {
           ...masterTripSnapshot.data()!,
           'location_id': widget.locationId, // Thêm locationID
           'status': true,
-          'trip_id': widget.tripId,
           'check': 0,
           'saved_at': FieldValue.serverTimestamp(),
         });
 
         // Copy timelines và schedule
         final timelinesSnapshot =
-        await _masterTripRef.collection('timelines').get();
+            await _masterTripRef.collection('timelines').get();
 
         for (var timelineDoc in timelinesSnapshot.docs) {
           final timelinePath = _userTripRef!
@@ -1017,16 +890,16 @@ class _TimelineBodyState extends State<TimelineBody> {
           await timelinePath.set({
             ...timelineDoc.data(),
             'location_id':
-            widget.locationId, // Thêm locationID cho từng timeline
+                widget.locationId, // Thêm locationID cho từng timeline
           });
 
           final scheduleSnapshot =
-          await timelineDoc.reference.collection('schedule').get();
+              await timelineDoc.reference.collection('schedule').get();
           for (var scheduleDoc in scheduleSnapshot.docs) {
             await timelinePath.collection('schedule').doc(scheduleDoc.id).set({
               ...scheduleDoc.data(),
               'location_id':
-              widget.locationId, // Thêm locationID cho từng schedule
+                  widget.locationId, // Thêm locationID cho từng schedule
             });
           }
         }
@@ -1037,25 +910,12 @@ class _TimelineBodyState extends State<TimelineBody> {
         // Tạo document chính với locationID
         await _userTripRef!.set({
           ...userTripSnapshot.data()!,
-          'location_id': widget.locationId,
-          'trip_id': widget.tripId,// Thêm locationID
+          'location_id': widget.locationId, // Thêm locationID
           'status': true,
           'check': 0,
           'saved_at': FieldValue.serverTimestamp(),
         });
       }
-
-      // Tạo mới bản ghi user_trip với trạng thái mặc định là đang áp dụng (0)
-      final docRef = await FirebaseFirestore.instance
-          .collection('user_trip')
-          .add({
-        'user_id': currentUserId,
-        'se_trip_id': se_tripId,
-        'trip_id': widget.tripId,
-        'check': 0,
-        'created_at': now,
-        'updated_at': now,
-      });
 
       // Ensure consistent status values in both collections
       await Future.wait([
@@ -1104,36 +964,36 @@ class _TimelineBodyState extends State<TimelineBody> {
         final actId = doc.data()['act_id'] as String?;
         if (actId == null) continue;
         final actDoc =
-        await FirebaseFirestore.instance
-            .collection('dia_diem')
-            .doc(widget.locationId)
-            .collection('activities')
-            .doc(actId)
-            .get();
+            await FirebaseFirestore.instance
+                .collection('dia_diem')
+                .doc(widget.locationId)
+                .collection('activities')
+                .doc(actId)
+                .get();
         if (actDoc.exists) {
           sum += (actDoc.data()?['price'] ?? 0).toDouble();
 
           if (widget.se_tripId != null) {
             final user = FirebaseAuth.instance.currentUser;
             final seTripCost =
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user!.uid)
-                .collection('selected_trips')
-                .doc(
-              widget.se_tripId!,
-            ) // an toàn vì đã kiểm tra null phía trên
-                .get();
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user!.uid)
+                    .collection('selected_trips')
+                    .doc(
+                      widget.se_tripId!,
+                    ) // an toàn vì đã kiểm tra null phía trên
+                    .get();
 
             soNguoi = seTripCost.data()?['so_nguoi'] ?? 1;
           } else {
             final tripCost =
-            await FirebaseFirestore.instance
-                .collection('dia_diem')
-                .doc(widget.locationId)
-                .collection('trips')
-                .doc(widget.tripId)
-                .get();
+                await FirebaseFirestore.instance
+                    .collection('dia_diem')
+                    .doc(widget.locationId)
+                    .collection('trips')
+                    .doc(widget.tripId)
+                    .get();
 
             soNguoi = tripCost.data()?['so_nguoi'] ?? 1;
           }
@@ -1388,7 +1248,7 @@ class _TimelineBodyState extends State<TimelineBody> {
 
                 // Hiển thị nút dựa theo trạng thái chuyến đi
                 if (userTripStatus == null)
-                // Chưa có bản ghi - hiển thị nút Áp dụng duy nhất
+                  // Chưa có bản ghi - hiển thị nút Áp dụng duy nhất
                   ElevatedButton(
                     onPressed: isLoading ? null : createNewUserTrip,
                     style: ElevatedButton.styleFrom(
@@ -1403,32 +1263,32 @@ class _TimelineBodyState extends State<TimelineBody> {
                       ),
                     ),
                     child:
-                    isLoading
-                        ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                        : const Text(
-                      'Áp dụng chuyến đi',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                        isLoading
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                            : const Text(
+                              'Áp dụng chuyến đi',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                   )
                 else if (userTripStatus == 0)
-                // Đang áp dụng - hiển thị 3 nút trạng thái
+                  // Đang áp dụng - hiển thị 3 nút trạng thái
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       ElevatedButton(
                         onPressed:
-                        (isLoading) ? null : () => updateTripStatus(0),
+                            (isLoading) ? null : () => updateTripStatus(0),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(MyColor.pr3),
                           foregroundColor: Colors.white,
@@ -1437,22 +1297,22 @@ class _TimelineBodyState extends State<TimelineBody> {
                           ),
                         ),
                         child:
-                        isLoading
-                            ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                            : const Text('Đang áp dụng'),
+                            isLoading
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : const Text('Đang áp dụng'),
                       ),
                       ElevatedButton(
                         onPressed:
-                        (isLoading || !allActivitiesCompleted)
-                            ? null
-                            : () => updateTripStatus(1),
+                            (isLoading || !allActivitiesCompleted)
+                                ? null
+                                : () => updateTripStatus(1),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(MyColor.white),
                           foregroundColor: Color(MyColor.pr5),
@@ -1471,7 +1331,7 @@ class _TimelineBodyState extends State<TimelineBody> {
                       ),
                       ElevatedButton(
                         onPressed:
-                        (isLoading) ? null : () => updateTripStatus(2),
+                            (isLoading) ? null : () => updateTripStatus(2),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(MyColor.white),
                           foregroundColor: Colors.red.shade400,
@@ -1485,7 +1345,7 @@ class _TimelineBodyState extends State<TimelineBody> {
                     ],
                   )
                 else
-                // Đã hoàn thành hoặc đã hủy - hiển thị nút đánh giá và áp dụng lại
+                  // Đã hoàn thành hoặc đã hủy - hiển thị nút đánh giá và áp dụng lại
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -1534,123 +1394,100 @@ class _TimelineBodyState extends State<TimelineBody> {
                 const SizedBox(height: 20),
 
                 // Nút bắt đầu/dừng hành trình chỉ hiển thị khi đang áp dụng
-                // if (tripData?.status != null && userTripStatus == 0)
-                //   ElevatedButton(
-                //     onPressed:
-                //     isLoading
-                //         ? null
-                //         : () async {
-                //       try {
-                //         final user = FirebaseAuth.instance.currentUser;
-                //         if (user == null) {
-                //           ScaffoldMessenger.of(context).showSnackBar(
-                //             const SnackBar(
-                //               content: Text(
-                //                 'Vui lòng đăng nhập để thực hiện thao tác',
-                //               ),
-                //             ),
-                //           );
-                //           return;
-                //         }
-                //
-                //         final newStatus = !tripData!.status;
-                //
-                //         // Cập nhật đồng thời cả 2 collection
-                //         await FirebaseFirestore.instance.runTransaction(
-                //               (transaction) async {
-                //             // 1. Cập nhật selected_trips
-                //             final selectedTripRef = FirebaseFirestore
-                //                 .instance
-                //                 .collection('users')
-                //                 .doc(user.uid)
-                //                 .collection('selected_trips')
-                //                 .doc(widget.se_tripId);
-                //
-                //             final selectedTripDoc = await transaction
-                //                 .get(selectedTripRef);
-                //             if (!selectedTripDoc.exists)
-                //               throw Exception(
-                //                 'Không tìm thấy selected_trip document',
-                //               );
-                //
-                //             transaction.update(selectedTripRef, {
-                //               //'status': newStatus,
-                //               'check': newStatus ?0 : null,
-                //               'updated_at':
-                //               FieldValue.serverTimestamp(),
-                //             });
-                //
-                //             // // 2. Cập nhật user_trip
-                //             // final userTripRef = FirebaseFirestore
-                //             //     .instance
-                //             //     .collection('user_trip')
-                //             //     .doc(userTripDocId);
-                //
-                //             // final userTripDoc = await transaction.get(
-                //             //   userTripRef,
-                //             // );
-                //             // if (!userTripDoc.exists)
-                //             //   throw Exception(
-                //             //     'Không tìm thấy user_trip document',
-                //             //   );
-                //             //
-                //             // transaction.update(userTripRef, {
-                //             //   'status': newStatus,
-                //             //   'updated_at':
-                //             //       FieldValue.serverTimestamp(),
-                //             // });
-                //           },
-                //         );
-                //
-                //         // Cập nhật state và reload dữ liệu
-                //         setState(() {
-                //           tripData = tripData!.copyWith(
-                //             status: newStatus,
-                //           );
-                //         });
-                //         await _loadTripData();
-                //
-                //         ScaffoldMessenger.of(context).showSnackBar(
-                //           SnackBar(
-                //             content: Text(
-                //               newStatus
-                //                   ? 'Đã bắt đầu hành trình'
-                //                   : 'Đã tạm dừng hành trình',
-                //             ),
-                //           ),
-                //         );
-                //       } catch (e) {
-                //         ScaffoldMessenger.of(context).showSnackBar(
-                //           SnackBar(
-                //             content: Text(
-                //               'Lỗi khi cập nhật: ${e.toString()}',
-                //             ),
-                //           ),
-                //         );
-                //       }
-                //     },
-                //     style: ElevatedButton.styleFrom(
-                //       backgroundColor: Color(MyColor.pr4),
-                //       foregroundColor: Colors.white,
-                //       padding: const EdgeInsets.symmetric(
-                //         horizontal: 32,
-                //         vertical: 14,
-                //       ),
-                //       shape: RoundedRectangleBorder(
-                //         borderRadius: BorderRadius.circular(12),
-                //       ),
-                //     ),
-                //     child: Text(
-                //       check == null
-                //           ? 'Bắt đầu hành trình'
-                //           : 'Dừng hành trình',
-                //       style: const TextStyle(
-                //         color: Colors.white,
-                //         fontSize: 16,
-                //         fontWeight: FontWeight.w500,
-                //       ),
-                //     ),
-                //   ),
+                if (tripData?.status != null && userTripStatus == 0)
+                  ElevatedButton(
+                    onPressed:
+                        isLoading
+                            ? null
+                            : () async {
+                              try {
+                                final user = FirebaseAuth.instance.currentUser;
+                                if (user == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Vui lòng đăng nhập để thực hiện thao tác',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                final newStatus = !tripData!.status;
+
+                                // Cập nhật đồng thời cả 2 collection
+                                await Future.wait([
+                                  // Cập nhật selected_trips trong users
+                                  FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(user.uid)
+                                      .collection('selected_trips')
+                                      .doc(widget.tripId)
+                                      .update({
+                                        'check': null,
+                                        'status': newStatus,
+                                      }),
+
+                                  // Cập nhật user_trip
+                                  FirebaseFirestore.instance
+                                      .collection('user_trip')
+                                      .doc(userTripDocId)
+                                      .update({
+                                        'status': newStatus,
+                                        'updated_at':
+                                            FieldValue.serverTimestamp(),
+                                      }),
+                                ]);
+
+                                // Cập nhật state và reload dữ liệu
+                                setState(() {
+                                  tripData = tripData!.copyWith(
+                                    status: newStatus,
+                                  );
+                                });
+                                await _loadTripData();
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      newStatus
+                                          ? 'Đã bắt đầu hành trình'
+                                          : 'Đã tạm dừng hành trình',
+                                    ),
+                                  ),
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Lỗi khi cập nhật: ${e.toString()}',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(MyColor.pr4),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      tripData!.status
+                          ? 'Dừng hành trình'
+                          : 'Bắt đầu hành trình',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
