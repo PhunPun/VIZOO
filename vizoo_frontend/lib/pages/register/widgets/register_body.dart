@@ -27,7 +27,7 @@ class _RegisterBodyState extends State<RegisterBody> {
         children: [
           const SizedBox(height: 115,),
           Text(
-            'Login',
+            'Register',
             style: TextStyle(
                 color: Color(MyColor.pr5),
                 fontSize: 40,
