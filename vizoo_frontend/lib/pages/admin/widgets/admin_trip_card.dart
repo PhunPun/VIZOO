@@ -22,6 +22,19 @@ const AdminTripCard({
 }
 
 class _AdminTripCardState extends State<AdminTripCard> {
+  late final DocumentReference<Map<String, dynamic>> _masterTripRef;
+  late int? totalCost;
+  @override
+  void initState() {
+    super.initState();
+    totalCost = 0;
+    _masterTripRef = FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.trip.locationId)
+        .collection('trips')
+        .doc(widget.trip.id);
+    _loadTotalCost();
+  }
   @override
   Future<void> _deleteTrip() async {
     try {
@@ -42,6 +55,56 @@ class _AdminTripCardState extends State<AdminTripCard> {
         context,
       ).showSnackBar(SnackBar(content: Text('Lỗi khi xóa: $e')));
     }
+  }
+
+  Future<void> _loadTotalCost() async {
+    double sum = 0;
+
+    // Lấy số người trước 1 lần duy nhất
+    final tripCostDoc = await FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.trip.locationId)
+        .collection('trips')
+        .doc(widget.trip.id)
+        .get();
+    int soNguoi = tripCostDoc.data()?['so_nguoi'] ?? 1;
+
+    // Lấy tất cả timelines
+    final timelines = await _masterTripRef.collection('timelines').get();
+    for (var tl in timelines.docs) {
+      final sch = await tl.reference.collection('schedule').get();
+
+      for (var doc in sch.docs) {
+        final actId = doc.data()['act_id'] as String?;
+        if (actId == null) continue;
+
+        final actDoc = await FirebaseFirestore.instance
+            .collection('dia_diem')
+            .doc(widget.trip.locationId)
+            .collection('activities')
+            .doc(actId)
+            .get();
+
+        if (actDoc.exists) {
+          sum += (actDoc.data()?['price'] ?? 0).toDouble();
+        }
+      }
+    }
+
+    // Nhân với số người sau khi đã tính tổng 1 lần duy nhất
+    sum *= soNguoi;
+    if (!mounted) return;
+    setState(() {
+      totalCost = sum.toInt();
+    });
+
+    // Cập nhật vào trips
+    await FirebaseFirestore.instance
+        .collection('dia_diem')
+        .doc(widget.trip.locationId)
+        .collection('trips')
+        .doc(widget.trip.id)
+        .update({'chi_phi': totalCost});
   }
 
   @override
@@ -261,7 +324,7 @@ class _AdminTripCardState extends State<AdminTripCard> {
                             ),
                           ),
                           Text(
-                            "${NumberFormat("#,###", "vi_VN").format(widget.trip.chiPhi)}đ",
+                            "${NumberFormat("#,###", "vi_VN").format(totalCost == 0 ? widget.trip.chiPhi : totalCost )}đ",
                             style: TextStyle(
                               color: Color(MyColor.pr5),
                               fontSize: 16,
