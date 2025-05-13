@@ -9,10 +9,11 @@ class OtherReviewsScreen extends StatefulWidget {
   final String tripId;
   final String locationName;
   final String tripDuration;
-
+  final String? seTripId;
   const OtherReviewsScreen({
     super.key,
     required this.tripId,
+    this.seTripId,
     required this.locationName,
     required this.tripDuration,
   });
@@ -33,17 +34,120 @@ class _OtherReviewsScreenState extends State<OtherReviewsScreen> {
     _loadReviews();
   }
 
+  Future<void> _debugReviewInfo() async {
+    try {
+      // Truy vấn tất cả đánh giá cho trip_id, không lọc se_trip_id
+      final allReviewsQuery = FirebaseFirestore.instance
+          .collection('reviews')
+          .where('trip_id', isEqualTo: widget.tripId);
+
+      final allReviewsDocs = await allReviewsQuery.get();
+
+      // Truy vấn đánh giá có se_trip_id
+      final withSeTripIdQuery =
+          widget.seTripId != null && widget.seTripId!.isNotEmpty
+              ? FirebaseFirestore.instance
+                  .collection('reviews')
+                  .where('trip_id', isEqualTo: widget.tripId)
+                  .where('se_trip_id', isEqualTo: widget.seTripId)
+              : null;
+
+      final withSeTripIdDocs =
+          withSeTripIdQuery != null ? await withSeTripIdQuery.get() : null;
+
+      // Hiển thị debug dialog
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: Text('Debug Thông tin Đánh giá'),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Trip ID: ${widget.tripId}'),
+                    Text('Se Trip ID: ${widget.seTripId ?? "Không có"}'),
+                    Divider(),
+                    Text(
+                      'Tổng số đánh giá theo trip_id: ${allReviewsDocs.size}',
+                    ),
+                    if (withSeTripIdDocs != null)
+                      Text(
+                        'Số đánh giá có cả trip_id và se_trip_id: ${withSeTripIdDocs.size}',
+                      ),
+                    Divider(),
+                    Text('Số đánh giá hiển thị hiện tại: ${_reviews.length}'),
+                    Text(
+                      'Số đánh giá có bình luận: ${_reviews.where((r) => (r['comment'] ?? '').isNotEmpty).length}',
+                    ),
+                    Divider(),
+                    Text('Chi tiết các đánh giá (trip_id):'),
+                    ...allReviewsDocs.docs.map((doc) {
+                      final data = doc.data();
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+                        child: Text(
+                          '- User: ${data['user_id']?.toString()?.substring(0, 8) ?? "?"}, '
+                          'seTripId: ${data['se_trip_id'] ?? "không có"}, '
+                          'Votes: ${data['votes'] ?? "0"}, '
+                          'Comment: ${(data['comment'] ?? "").isEmpty ? "Không có" : "Có"}',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Đóng'),
+                ),
+              ],
+            ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi debug: $e')));
+    }
+  }
+
   Future<void> _loadReviews() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Lấy tất cả đánh giá của người dùng khác
-      final otherReviews = await _tripService.getOtherUserReviews(widget.tripId);
-      
-      // Lấy điểm đánh giá trung bình
-      final averageRating = await _tripService.getTripAverageRating(widget.tripId);
+      // Xóa cache để đảm bảo lấy dữ liệu mới nhất
+      _tripService.clearCache();
+
+      // Lấy tất cả đánh giá của người dùng khác, truyền cả seTripId
+      final otherReviews = await _tripService.getOtherUserReviews(
+        widget.tripId,
+        seTripId: widget.seTripId,
+      );
+
+      // Lấy điểm đánh giá trung bình - cũng truyền seTripId
+      final averageRating = await _tripService.getTripAverageRating(
+        widget.tripId,
+        seTripId: widget.seTripId,
+      );
+
+      // Đếm tổng số đánh giá, bao gồm cả của người dùng hiện tại
+      final countReviewsQuery =
+          widget.seTripId != null && widget.seTripId!.isNotEmpty
+              ? FirebaseFirestore.instance
+                  .collection('reviews')
+                  .where('trip_id', isEqualTo: widget.tripId)
+                  .where('se_trip_id', isEqualTo: widget.seTripId)
+              : FirebaseFirestore.instance
+                  .collection('reviews')
+                  .where('trip_id', isEqualTo: widget.tripId);
+
+      final allReviewsSnapshot = await countReviewsQuery.get();
+      final int totalReviews = allReviewsSnapshot.size;
 
       if (mounted) {
         setState(() {
@@ -57,9 +161,9 @@ class _OtherReviewsScreenState extends State<OtherReviewsScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi tải đánh giá: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi khi tải đánh giá: $e')));
       }
     }
   }
@@ -90,9 +194,10 @@ class _OtherReviewsScreenState extends State<OtherReviewsScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildReviewsList(),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _buildReviewsList(),
     );
   }
 
@@ -171,15 +276,20 @@ class _OtherReviewsScreenState extends State<OtherReviewsScreen> {
                   Icon(Icons.star, color: Colors.amber, size: 18),
                   const SizedBox(width: 8),
                   Text(
-                    '(${_reviews.length + 1} đánh giá)', // +1 để tính cả đánh giá của người dùng hiện tại
+                    '(${_reviews.length} đánh giá)', // Chỉ hiển thị số lượng đánh giá người khác
                     style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                 ],
               ),
+              // Thêm text debug (có thể xóa sau khi fix)
+              Text(
+                'Hiển thị ${_reviews.length} đánh giá, có ${_reviews.where((r) => (r['comment'] ?? '').isNotEmpty).length} đánh giá có bình luận',
+                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+              ),
             ],
           ),
         ),
-        
+
         // Danh sách đánh giá
         Expanded(
           child: ListView.builder(
@@ -196,14 +306,15 @@ class _OtherReviewsScreenState extends State<OtherReviewsScreen> {
   }
 
   Widget _buildReviewCard(Map<String, dynamic> review) {
-    final int rating = review['votes'] is int 
-        ? review['votes'] 
-        : int.tryParse(review['votes']?.toString() ?? '0') ?? 0;
-    
+    final int rating =
+        review['votes'] is int
+            ? review['votes']
+            : int.tryParse(review['votes']?.toString() ?? '0') ?? 0;
+
     final String comment = review['comment'] ?? '';
     final String userName = review['userName'] ?? 'Người dùng khác';
     final String date = review['formattedDate'] ?? '';
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -281,7 +392,7 @@ class _OtherReviewsScreenState extends State<OtherReviewsScreen> {
                 ),
               ],
             ),
-            
+
             // Đánh giá sao
             const SizedBox(height: 12),
             Row(
@@ -294,22 +405,16 @@ class _OtherReviewsScreenState extends State<OtherReviewsScreen> {
                 ),
               ),
             ),
-            
+
             // Bình luận
             if (comment.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text(
                 'Nhận xét:',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
               ),
               const SizedBox(height: 4),
-              Text(
-                comment,
-                style: TextStyle(fontSize: 14),
-              ),
+              Text(comment, style: TextStyle(fontSize: 14)),
             ],
           ],
         ),

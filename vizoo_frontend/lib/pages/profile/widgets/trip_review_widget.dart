@@ -18,7 +18,6 @@ class TripReviewWidget extends StatefulWidget {
     required this.reviewId,
     this.showOtherReviews =
         false, // Mặc định không hiển thị nút xem đánh giá khác
-    
   });
 
   @override
@@ -237,7 +236,23 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
         return '';
     }
   }
-
+  String _formatDuration(int soDays) {
+  int soDem;
+  if (soDays == 1) {
+    soDem = 1;
+  } else if (soDays == 2) {
+    soDem = 1;
+  } else if (soDays == 3) {
+    soDem = 2;
+  } else if (soDays == 4) {
+    soDem = 3;
+  } else if (soDays >= 5) {
+    soDem = 4;
+  } else {
+    soDem = 0;
+  }
+  return '$soDays ngày $soDem đêm';
+}
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -249,6 +264,20 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
 
     // Trích xuất thông tin cho TripDisplayCard
     final int soDays = _extractIntValue(_tripData, 'so_ngay', 1);
+    int soDem;
+    if (soDays == 1) {
+      soDem = 1;
+    } else if (soDays == 2) {
+      soDem = 1;
+    } else if (soDays == 3) {
+      soDem = 2;
+    } else if (soDays == 4) {
+      soDem = 3;
+    } else if (soDays >= 5) {
+      soDem = 4;
+    } else {
+      soDem = 0;
+    }
 
     // Tạo thông tin cho TripDisplayCard
     final Map<String, dynamic> tripReviewInfo = {
@@ -258,7 +287,7 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
           _locationData['id'] ?? _extractLocationId(_reviewData['trip_id']),
       'se_trip_id': _tripData['se_trip_id'] ?? '',
       'location': _locationData['ten'] ?? 'Không xác định',
-      'duration': '$soDays ngày ${soDays > 1 ? (soDays - 1) : 0} đêm',
+      'duration': _formatDuration(soDays), 
       'rating': rating,
       'comment': comment,
       'imageUrl':
@@ -405,6 +434,7 @@ class _TripReviewWidgetState extends State<TripReviewWidget> {
                         builder:
                             (context) => OtherReviewsScreen(
                               tripId: widget.tripId,
+                              seTripId: tripReviewInfo['se_trip_id'],
                               locationName: tripReviewInfo['location'],
                               tripDuration: tripReviewInfo['duration'],
                             ),

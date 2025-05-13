@@ -7,16 +7,13 @@ import 'package:vizoo_frontend/calculator/day_format.dart';
 import 'package:vizoo_frontend/themes/colors/colors.dart';
 import 'package:intl/intl.dart';
 import '../models/trip_models_json.dart';
+import '../pages/profile/pages/other_reviews_screen.dart';
 
 class TripCard extends StatefulWidget {
   final Trip trip;
   final VoidCallback? onTap;
 
-  const TripCard({
-    super.key,
-    required this.trip,
-    this.onTap,
-  });
+  const TripCard({super.key, required this.trip, this.onTap});
 
   @override
   State<TripCard> createState() => _TripCardState();
@@ -103,12 +100,12 @@ class _TripCardState extends State<TripCard> {
         .where('trip_id', isEqualTo: widget.trip.id)
         .snapshots()
         .listen((snapshot) {
-      if (mounted) {
-        setState(() {
-          _loveCount = snapshot.docs.length;
+          if (mounted) {
+            setState(() {
+              _loveCount = snapshot.docs.length;
+            });
+          }
         });
-      }
-    });
   }
 
   void _listenToReviews() {
@@ -117,27 +114,27 @@ class _TripCardState extends State<TripCard> {
         .where('trip_id', isEqualTo: widget.trip.id)
         .snapshots()
         .listen((snapshot) {
-      if (mounted) {
-        // Mặc định nếu không có đánh giá thì rating = 0
-        double sum = 0;
-        int count = 0;
-        
-        if (snapshot.docs.isNotEmpty) {
-          for (var doc in snapshot.docs) {
-            // Lấy giá trị votes từ document
-            final votes = doc.data()['votes'];
-            if (votes != null && votes is num) {
-              sum += votes.toDouble();
-              count++;
+          if (mounted) {
+            // Mặc định nếu không có đánh giá thì rating = 0
+            double sum = 0;
+            int count = 0;
+
+            if (snapshot.docs.isNotEmpty) {
+              for (var doc in snapshot.docs) {
+                // Lấy giá trị votes từ document
+                final votes = doc.data()['votes'];
+                if (votes != null && votes is num) {
+                  sum += votes.toDouble();
+                  count++;
+                }
+              }
             }
+
+            setState(() {
+              _averageRating = count > 0 ? sum / count : 0.0;
+            });
           }
-        }
-        
-        setState(() {
-          _averageRating = count > 0 ? sum / count : 0.0;
         });
-      }
-    });
   }
 
   @override
@@ -151,12 +148,13 @@ class _TripCardState extends State<TripCard> {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection('love')
-        .where('user_id', isEqualTo: currentUser.uid)
-        .where('trip_id', isEqualTo: widget.trip.id)
-        .limit(1)
-        .get();
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('love')
+            .where('user_id', isEqualTo: currentUser.uid)
+            .where('trip_id', isEqualTo: widget.trip.id)
+            .limit(1)
+            .get();
 
     if (snapshot.docs.isNotEmpty && mounted) {
       setState(() {
@@ -187,10 +185,11 @@ class _TripCardState extends State<TripCard> {
         'timestamp': FieldValue.serverTimestamp(),
       });
     } else {
-      final existing = await loveRef
-          .where('user_id', isEqualTo: currentUser.uid)
-          .where('trip_id', isEqualTo: widget.trip.id)
-          .get();
+      final existing =
+          await loveRef
+              .where('user_id', isEqualTo: currentUser.uid)
+              .where('trip_id', isEqualTo: widget.trip.id)
+              .get();
 
       for (final doc in existing.docs) {
         await doc.reference.delete();
@@ -216,12 +215,13 @@ class _TripCardState extends State<TripCard> {
       for (var doc in sch.docs) {
         final actId = doc.data()['act_id'] as String?;
         if (actId == null) continue;
-        final actDoc = await FirebaseFirestore.instance
-            .collection('dia_diem')
-            .doc(widget.trip.locationId)
-            .collection('activities')
-            .doc(actId)
-            .get();
+        final actDoc =
+            await FirebaseFirestore.instance
+                .collection('dia_diem')
+                .doc(widget.trip.locationId)
+                .collection('activities')
+                .doc(actId)
+                .get();
         if (actDoc.exists && actDoc.data()?['categories'] == 'eat') {
           count += 1;
         }
@@ -238,12 +238,13 @@ class _TripCardState extends State<TripCard> {
       for (var doc in sch.docs) {
         final actId = doc.data()['act_id'] as String?;
         if (actId == null) continue;
-        final actDoc = await FirebaseFirestore.instance
-            .collection('dia_diem')
-            .doc(widget.trip.locationId)
-            .collection('activities')
-            .doc(actId)
-            .get();
+        final actDoc =
+            await FirebaseFirestore.instance
+                .collection('dia_diem')
+                .doc(widget.trip.locationId)
+                .collection('activities')
+                .doc(actId)
+                .get();
         if (actDoc.exists) {
           sum += (actDoc.data()?['price'] ?? 0).toDouble();
         }
@@ -254,59 +255,126 @@ class _TripCardState extends State<TripCard> {
 
   // Hiển thị sao dựa trên rating
   Widget _buildRatingStars(double rating) {
-    // Nếu chưa có đánh giá nào (rating = 0)
-    if (rating <= 0) {
-      return Text(
-        'Chưa có đánh giá',
-        style: TextStyle(
-          color: Color(MyColor.pr5),
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          fontStyle: FontStyle.italic,
-        ),
-      );
-    }
-    
-    // Làm tròn xuống 0.5 gần nhất
-    double roundedRating = (rating * 2).round() / 2;
-    
-    return Row(
-      children: [
-        Icon(
-          roundedRating >= 1 ? Icons.star : roundedRating >= 0.5 ? Icons.star_half : Icons.star_border,
-          color: Colors.amber,
-          size: 18,
-        ),
-        Icon(
-          roundedRating >= 2 ? Icons.star : roundedRating >= 1.5 ? Icons.star_half : Icons.star_border,
-          color: Colors.amber,
-          size: 18,
-        ),
-        Icon(
-          roundedRating >= 3 ? Icons.star : roundedRating >= 2.5 ? Icons.star_half : Icons.star_border,
-          color: Colors.amber,
-          size: 18,
-        ),
-        Icon(
-          roundedRating >= 4 ? Icons.star : roundedRating >= 3.5 ? Icons.star_half : Icons.star_border,
-          color: Colors.amber,
-          size: 18,
-        ),
-        Icon(
-          roundedRating >= 5 ? Icons.star : roundedRating >= 4.5 ? Icons.star_half : Icons.star_border,
-          color: Colors.amber,
-          size: 18,
-        ),
-        SizedBox(width: 4),
-        Text(
-          '${roundedRating.toStringAsFixed(1)}',
-          style: TextStyle(
-            color: Color(MyColor.pr5),
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
+    // Tạo widget hiển thị với kiểu GestureDetector để bắt sự kiện tap
+    return GestureDetector(
+      onTap: () {
+        if (rating > 0) {
+          // Chỉ mở màn hình reviews khi có đánh giá (rating > 0)
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => OtherReviewsScreen(
+                    tripId: widget.trip.id,
+                    locationName: widget.trip.name,
+                    tripDuration: dayFormat(widget.trip.soNgay),
+                  ),
+            ),
+          );
+        } else {
+          // Nếu chưa có đánh giá, có thể hiển thị thông báo
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Chưa có đánh giá nào cho chuyến đi này")),
+          );
+        }
+      },
+      child: Tooltip(
+        message:
+            rating > 0 ? "Nhấn để xem đánh giá chi tiết" : "Chưa có đánh giá",
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color:
+                rating > 0 ? Colors.amber.withOpacity(0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+            border:
+                rating > 0
+                    ? Border.all(color: Colors.amber.withOpacity(0.3), width: 1)
+                    : null,
+          ),
+          child: Row(
+            children: [
+              rating <= 0
+                  ? Text(
+                    'Chưa có đánh giá',
+                    style: TextStyle(
+                      color: Color(MyColor.pr5),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  )
+                  : Row(
+                    children: [
+                      Icon(
+                        rating >= 1
+                            ? Icons.star
+                            : rating >= 0.5
+                            ? Icons.star_half
+                            : Icons.star_border,
+                        color: Colors.amber,
+                        size: 18,
+                      ),
+                      Icon(
+                        rating >= 2
+                            ? Icons.star
+                            : rating >= 1.5
+                            ? Icons.star_half
+                            : Icons.star_border,
+                        color: Colors.amber,
+                        size: 18,
+                      ),
+                      Icon(
+                        rating >= 3
+                            ? Icons.star
+                            : rating >= 2.5
+                            ? Icons.star_half
+                            : Icons.star_border,
+                        color: Colors.amber,
+                        size: 18,
+                      ),
+                      Icon(
+                        rating >= 4
+                            ? Icons.star
+                            : rating >= 3.5
+                            ? Icons.star_half
+                            : Icons.star_border,
+                        color: Colors.amber,
+                        size: 18,
+                      ),
+                      Icon(
+                        rating >= 5
+                            ? Icons.star
+                            : rating >= 4.5
+                            ? Icons.star_half
+                            : Icons.star_border,
+                        color: Colors.amber,
+                        size: 18,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '${rating.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          color: Color(MyColor.pr5),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+              // Thêm biểu tượng để gợi ý có thể nhấn vào xem đánh giá
+              if (rating > 0) ...[
+                SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: Color(MyColor.pr5),
+                ),
+              ],
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -325,16 +393,18 @@ class _TripCardState extends State<TripCard> {
               Text(
                 widget.trip.name + " ",
                 style: TextStyle(
-                    color: Color(MyColor.black),
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold),
+                  color: Color(MyColor.black),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 dayFormat(widget.trip.soNgay),
                 style: TextStyle(
-                    color: Color(MyColor.black),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400),
+                  color: Color(MyColor.black),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ],
           ),
@@ -363,7 +433,8 @@ class _TripCardState extends State<TripCard> {
                       onPressed: _handleLovePressed,
                       icon: Icon(
                         Icons.favorite,
-                        color: _loved ? Color(MyColor.red) : Color(MyColor.white),
+                        color:
+                            _loved ? Color(MyColor.red) : Color(MyColor.white),
                         shadows: [
                           Shadow(
                             color: Color(MyColor.black),
@@ -381,7 +452,10 @@ class _TripCardState extends State<TripCard> {
                       child: Text(
                         '$_loveCount',
                         style: TextStyle(
-                          color: _loved ? Color(MyColor.white) : Color(MyColor.black),
+                          color:
+                              _loved
+                                  ? Color(MyColor.white)
+                                  : Color(MyColor.black),
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           shadows: [
@@ -418,13 +492,13 @@ class _TripCardState extends State<TripCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildInfo("Nơi ở", widget.trip.noiO, isText: true),
-                    //_buildInfo("Số ngày", widget.trip.soNgay),
-                    _buildInfo("Chi phí",
-                        "${NumberFormat('#,###', 'vi_VN').format(widget.trip.chiPhi)}đ",
-                        isText: true),
-                    // Hiển thị rating stars
-                    _buildRatingStars(_averageRating),
-                    // Không cần hiển thị số lượt yêu thích ở đây vì đã hiển thị ở trên hình ảnh
+                    _buildInfo(
+                      "Chi phí",
+                      "${NumberFormat('#,###', 'vi_VN').format(widget.trip.chiPhi)}đ",
+                      isText: true,
+                    ),
+                    // Sử dụng _buildInfo với tham số isRating để hiển thị rating
+                    _buildInfo("Đánh giá", _averageRating, isRating: true),
                   ],
                 ),
               ],
@@ -435,15 +509,29 @@ class _TripCardState extends State<TripCard> {
     );
   }
 
-  Widget _buildInfo(String label, dynamic value, {bool isText = false}) {
+  Widget _buildInfo(
+    String label,
+    dynamic value, {
+    bool isText = false,
+    bool isRating = false,
+  }) {
+    if (isRating) {
+      return Row(
+        children: [
+          Text(
+            "$label: ",
+            style: const TextStyle(color: Colors.black, fontSize: 16),
+          ),
+          _buildRatingStars(value as double),
+        ],
+      );
+    }
+
     return Row(
       children: [
         Text(
           "$label: ",
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-          ),
+          style: const TextStyle(color: Colors.black, fontSize: 16),
         ),
         ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 150),

@@ -9,6 +9,23 @@ class TripDataService {
   final Map<String, Map<String, dynamic>> _tripsCache = {};
   final Map<String, Map<String, dynamic>> _locationsCache = {};
   final Map<String, double> _ratingsCache = {};
+  String formatDuration(int soDays) {
+    int soDem;
+    if (soDays == 1) {
+      soDem = 1;
+    } else if (soDays == 2) {
+      soDem = 1;
+    } else if (soDays == 3) {
+      soDem = 2;
+    } else if (soDays == 4) {
+      soDem = 3;
+    } else if (soDays >= 5) {
+      soDem = 4;
+    } else {
+      soDem = 0;
+    }
+    return '$soDays ngày $soDem đêm';
+  }
 
   // Lấy thông tin trip từ bảng selected_trips và user_trip
   Future<List<Map<String, dynamic>>> getUserTrips({
@@ -142,7 +159,7 @@ class TripDataService {
           'location_id': locationId,
           'se_trip_id': seTripId,
           'location': locationData['ten'] ?? 'Không xác định',
-          'duration': '$soDays ngày ${soDays > 1 ? (soDays - 1) : 0} đêm',
+          'duration': formatDuration(soDays),
           'activities': activities,
           'meals': meals,
           'people': people,
@@ -490,18 +507,26 @@ class TripDataService {
     }
   }
 
-  // Lấy danh sách đánh giá của người dùng khác
-  // Lấy danh sách đánh giá của người dùng khác
-  Future<List<Map<String, dynamic>>> getOtherUserReviews(String tripId) async {
+  // Lấy danh sách đánh giá của người dùng khác dựa trên cả trip_id và se_trip_id
+  Future<List<Map<String, dynamic>>> getOtherUserReviews(
+    String tripId, {
+    String? seTripId,
+  }) async {
     try {
       final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-      // Lấy tất cả đánh giá của trip
-      final reviewsSnapshot =
-          await _firestore
-              .collection('reviews')
-              .where('trip_id', isEqualTo: tripId)
-              .get();
+      // Xây dựng query cơ bản
+      Query reviewsQuery = _firestore
+          .collection('reviews')
+          .where('trip_id', isEqualTo: tripId);
+
+      // Thêm điều kiện se_trip_id nếu được cung cấp
+      if (seTripId != null && seTripId.isNotEmpty) {
+        reviewsQuery = reviewsQuery.where('se_trip_id', isEqualTo: seTripId);
+      }
+
+      // Thực hiện truy vấn
+      final reviewsSnapshot = await reviewsQuery.get();
 
       if (reviewsSnapshot.docs.isEmpty) {
         return [];
@@ -511,7 +536,7 @@ class TripDataService {
       final otherReviews = <Map<String, dynamic>>[];
 
       for (var doc in reviewsSnapshot.docs) {
-        final data = doc.data();
+        final data = doc.data() as Map<String, dynamic>;
         final userId = data['user_id'] as String? ?? '';
 
         if (userId != currentUserId) {
@@ -557,22 +582,33 @@ class TripDataService {
   }
 
   // Lấy điểm đánh giá trung bình
-  Future<double> getTripAverageRating(String tripId) async {
+  Future<double> getTripAverageRating(String tripId, {String? seTripId}) async {
     try {
       // Kiểm tra cache
-      if (_ratingsCache.containsKey(tripId)) {
-        return _ratingsCache[tripId]!;
+      final String cacheKey =
+          seTripId != null && seTripId.isNotEmpty
+              ? "$tripId:$seTripId"
+              : tripId;
+
+      if (_ratingsCache.containsKey(cacheKey)) {
+        return _ratingsCache[cacheKey]!;
+      }
+
+      // Xây dựng query cơ bản
+      Query reviewsQuery = _firestore
+          .collection('reviews')
+          .where('trip_id', isEqualTo: tripId);
+
+      // Thêm điều kiện se_trip_id nếu được cung cấp
+      if (seTripId != null && seTripId.isNotEmpty) {
+        reviewsQuery = reviewsQuery.where('se_trip_id', isEqualTo: seTripId);
       }
 
       // Lấy tất cả đánh giá của trip
-      final reviewsSnapshot =
-          await _firestore
-              .collection('reviews')
-              .where('trip_id', isEqualTo: tripId)
-              .get();
+      final reviewsSnapshot = await reviewsQuery.get();
 
       if (reviewsSnapshot.docs.isEmpty) {
-        _ratingsCache[tripId] = 0.0;
+        _ratingsCache[cacheKey] = 0.0;
         return 0.0;
       }
 
@@ -581,7 +617,8 @@ class TripDataService {
       int count = 0;
 
       for (var doc in reviewsSnapshot.docs) {
-        final votes = doc.data()['votes'];
+        final data = doc.data() as Map<String, dynamic>;
+        final votes = data['votes'];
 
         if (votes != null) {
           double rating = 0.0;
@@ -603,7 +640,7 @@ class TripDataService {
       }
 
       final double averageRating = count > 0 ? totalRating / count : 0.0;
-      _ratingsCache[tripId] = averageRating;
+      _ratingsCache[cacheKey] = averageRating;
 
       return averageRating;
     } catch (e) {
