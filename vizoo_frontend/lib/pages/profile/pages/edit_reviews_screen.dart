@@ -173,10 +173,24 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
     _price = _extractIntValue(data, 'chi_phi', 0);
     _people = _extractIntValue(data, 'so_nguoi', 1);
 
-    // Handle days information
+    // Handle days information - Sửa phần này
     if (data.containsKey('so_ngay')) {
       final soDays = _extractIntValue(data, 'so_ngay', 1);
-      _duration = '$soDays ngày ${soDays > 1 ? (soDays - 1) : 0} đêm';
+      int soDem;
+      if (soDays == 1) {
+        soDem = 1;
+      } else if (soDays == 2) {
+        soDem = 1;
+      } else if (soDays == 3) {
+        soDem = 2;
+      } else if (soDays == 4) {
+        soDem = 3;
+      } else if (soDays >= 5) {
+        soDem = 4;
+      } else {
+        soDem = 0;
+      }
+      _duration = '$soDays ngày $soDem đêm';
     }
 
     // Get location name

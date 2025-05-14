@@ -368,6 +368,7 @@ class _CancelledTripsListState extends State<CancelledTripsList> {
     String newSeTripId,
   ) async {
     try {
+      
       // 1. Thử sao chép từ selected_trip cũ nếu có
       if (oldSeTripId.isNotEmpty) {
         final oldSeTripRef = FirebaseFirestore.instance
